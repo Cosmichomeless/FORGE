@@ -11,10 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:forge",
+        "spring.datasource.url=jdbc:h2:mem:forge;MODE=PostgreSQL;NON_KEYWORDS=KEY,VALUE",
         "spring.datasource.username=sa",
-        "spring.datasource.password=",
-        "spring.flyway.enabled=false"
+        "spring.datasource.password="
 })
 @AutoConfigureMockMvc
 class ForgeApplicationTests {
