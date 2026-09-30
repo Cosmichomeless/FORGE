@@ -1,0 +1,33 @@
+name: Error
+description: Informar de un fallo reproducible
+title: "[Bug] "
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Qué ocurre
+      description: No incluyas credenciales ni datos personales.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Pasos para reproducir
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado y resultado real
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      description: Sistema, versiones de Java, Node, Docker y commit afectado.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidencia
+      description: Logs o capturas sin secretos ni información personal.
