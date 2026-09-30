@@ -4,14 +4,14 @@
 
 **Un espacio de gestión de proyectos, construido paso a paso.**
 
-![Estado](https://img.shields.io/badge/estado-foundation-blue)
+![Estado](https://img.shields.io/badge/estado-auth-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>
 
-FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Actualmente contiene la base técnica del monorepo: API con health check, interfaz de prueba, PostgreSQL local y migraciones. **Todavía no implementa autenticación ni gestión de organizaciones, proyectos o tickets; no hay demo pública ni release de producción.**
+FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Actualmente incluye registro e inicio de sesión con Spring Security, un área privada básica, PostgreSQL local y migraciones. **Todavía no implementa organizaciones, proyectos ni tickets; no hay demo pública ni release de producción.**
 
 ## Arquitectura
 
@@ -19,11 +19,11 @@ FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Actualmen
 ```mermaid
 flowchart LR
   Browser[Navegador] --> UI[Next.js · :3000]
-  UI -. API de negocio pendiente .-> API[Spring Boot · :8080]
+  UI -->|Sesión HttpOnly + CSRF| API[Spring Boot · :8080]
   API --> DB[(PostgreSQL · :5432)]
 ```
 
-El frontend tiene TanStack Query, un botón con convenciones shadcn/ui y un formulario mínimo validado con React Hook Form + Zod. La integración de negocio con la API llegará en las siguientes issues. Flyway es la única vía para cambiar el esquema; Hibernate solo lo valida.
+El frontend usa TanStack Query, componentes con convenciones shadcn/ui y formularios de registro/login validados con React Hook Form + Zod. La sesión se resuelve con la API real; las funciones de gestión llegarán en las siguientes issues. Flyway es la única vía para cambiar el esquema; Hibernate solo lo valida.
 
 ## Requisitos
 
@@ -51,7 +51,7 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-Edita .env y backend/.env: rellena DB_PASSWORD con una contraseña **local**, igual en ambos archivos. DB_USER también debe coincidir. Si cambias DB_PORT, ajusta el puerto de DB_URL en backend/.env. No hay variables obligatorias en el frontend todavía; cualquier NEXT_PUBLIC_* es visible en el navegador y no debe contener secretos.
+Edita .env y backend/.env: rellena DB_PASSWORD con una contraseña **local**, igual en ambos archivos. DB_USER también debe coincidir. Si cambias DB_PORT, ajusta el puerto de DB_URL en backend/.env. Configura NEXT_PUBLIC_API_URL con el origen de la API y APP_FRONTEND_ORIGIN con el de la interfaz (sin barra final). Usa localhost consistentemente; mezclarlo con 127.0.0.1 cambia origen y cookies. Cualquier NEXT_PUBLIC_* es visible en el navegador y no debe contener secretos.
 
 Para esta guía local usa una contraseña aleatoria larga con letras, números, guiones y guiones bajos, sin espacios ni caracteres de shell como `$`, comillas o `;`. Así la asignación se interpreta igual en Docker Compose y al cargarla con `source`. Esta recomendación de formato es para el entorno local, no una política de contraseñas de usuarios.
 
@@ -86,7 +86,7 @@ npm ci
 npm run dev
 ```
 
-Abre http://localhost:3000. La página muestra FORGE y el formulario de comprobación de librerías, no una pantalla de negocio.
+Abre http://localhost:3000. Desde la página inicial puedes ir a /register y /login. Tras iniciar sesión accedes a /dashboard, un área privada básica sin funciones de proyectos aún.
 
 ## Verificación
 
@@ -131,9 +131,36 @@ FORGE/
 └── CONTRIBUTING.md
 ```
 
+## Autenticación y seguridad
+
+| Endpoint | Resultado |
+| --- | --- |
+| GET /api/v1/auth/csrf | Token y nombre de cabecera CSRF; accesible antes de login. |
+| POST /api/v1/auth/register | JSON con name/email/password; 201 con id/name/email, 400 por validación o 409 por email duplicado. |
+| POST /api/v1/auth/login | JSON con email/password; 200 con usuario y sesión, 401 por credenciales inválidas. |
+| GET /api/v1/auth/me | Usuario actual o 401 si no hay sesión válida. |
+| POST /api/v1/auth/logout | 204, sesión invalidada y cookie eliminada. |
+
+Todas las operaciones POST requieren CSRF, incluso registro/login/logout. El cliente obtiene el token con credentials: include, envía la cabecera indicada y vuelve a obtenerlo para cada operación. El login cambia el ID de sesión y renueva CSRF. Las respuestas de autenticación no se almacenan en caché. No se guardan contraseñas ni tokens de sesión en localStorage.
+
+La API usa BCrypt (coste 12), email normalizado y único en PostgreSQL, y devuelve DTOs sin hash. Registro admite nombre de 1–100 caracteres, email de hasta 254 y contraseña de 8–72 caracteres sin superar **72 bytes UTF-8**.
+
+La cookie de sesión es HttpOnly y caduca tras 30 minutos de inactividad. COOKIE_SECURE=false y COOKIE_SAME_SITE=lax son solo los valores locales para HTTP. En despliegue HTTPS establece **COOKIE_SECURE=true**. Si frontend y API son cross-site, requiere COOKIE_SAME_SITE=none y HTTPS/Secure; CORS solo admite APP_FRONTEND_ORIGIN. Estas opciones no sustituyen la verificación del despliegue de las futuras issues de release.
+
+El frontend resuelve /me antes de mostrar contenido privado y redirige al login si recibe 401. La autorización real se aplica en la API; el shell cliente no sustituye controles del servidor. Las sesiones viven en memoria del backend y se pierden al reiniciarlo. No hay todavía recuperación de contraseña, OAuth, MFA ni almacenamiento distribuido de sesiones.
+
+### Tests de autenticación con PostgreSQL
+
+La suite normal usa H2 y un servidor embebido para verificar cookies. AuthTests también puede ejecutarse contra PostgreSQL con AUTH_TEST_DB_URL, AUTH_TEST_DB_USER y AUTH_TEST_DB_PASSWORD. **Usa exclusivamente una base separada y desechable: esta clase elimina los usuarios entre tests. Nunca apuntes a desarrollo compartido o producción.**
+
+```bash
+# Variables exportadas previamente para una base PostgreSQL de pruebas dedicada:
+(cd backend && mvn -Dtest=AuthTests test)
+```
+
 ## Roadmap y contribuciones
 
-Las issues de GitHub son la fuente de seguimiento. La siguiente etapa añade autenticación, organizaciones, proyectos, tickets, colaboración y pruebas. Docker del stack completo, CI y despliegue en Azure siguen pendientes. No se promete ninguna extensión (Redis/WebSockets) en esta base.
+Las issues de GitHub son la fuente de seguimiento. La siguiente etapa añade organizaciones, proyectos, tickets, colaboración y más pruebas. Docker del stack completo, CI y despliegue en Azure siguen pendientes. No se promete ninguna extensión (Redis/WebSockets) en esta base.
 
 Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para ramas cortas, Conventional Commits, comprobaciones y Definition of Done. Las plantillas de issues y PR están en .github/. Todavía no hay checks de CI configurados: ejecuta las comprobaciones manuales antes de solicitar revisión.
 
