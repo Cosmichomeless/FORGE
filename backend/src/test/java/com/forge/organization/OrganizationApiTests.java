@@ -101,9 +101,4 @@ class OrganizationApiTests extends ApiTestSupport {
                     .andExpect(status().isOk());
         }
     }
-
-    void addMember(String organizationId, String email, String role) {
-        jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) select random_uuid(), ?::uuid, id, ?, current_timestamp from users where email = ?",
-                organizationId, role, email);
-    }
 }

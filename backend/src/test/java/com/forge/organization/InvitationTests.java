@@ -31,7 +31,7 @@ class InvitationTests extends ApiTestSupport {
         var bob = signUp("Bob", "bob@example.com");
         var cy = signUp("Cy", "cy@example.com");
         String id = ada.createOrganization("Acme", "acme");
-        jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) select random_uuid(), ?::uuid, id, 'MEMBER', current_timestamp from users where email = 'bob@example.com'", id);
+        addMember(id, "bob@example.com", "MEMBER");
         var body = Map.of("email", "x@example.com", "role", "MEMBER");
         bob.post("/api/v1/organizations/" + id + "/invitations", body).andExpect(status().isForbidden());
         cy.post("/api/v1/organizations/" + id + "/invitations", body).andExpect(status().isNotFound());

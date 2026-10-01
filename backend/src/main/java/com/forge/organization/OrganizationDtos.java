@@ -36,4 +36,11 @@ public final class OrganizationDtos {
     public record AcceptInvitationRequest(@NotBlank @Size(max = 100) String token) {
         public AcceptInvitationRequest { token = token == null ? null : token.trim(); }
     }
+
+    public record MemberResponse(UUID userId, String name, String email, Role role, Instant joinedAt) {
+        static MemberResponse from(Membership membership) {
+            return new MemberResponse(membership.getUserId(), membership.getUser().getName(), membership.getUser().getEmail(), membership.getRole(), membership.getCreatedAt());
+        }
+    }
+    public record MemberRoleRequest(@NotNull Role role) {}
 }

@@ -74,4 +74,12 @@ abstract class ApiTestSupport {
     private MockHttpServletRequestBuilder withCsrf(MockHttpServletRequestBuilder request, Client client, Object body) {
         return client.withBody(request, body);
     }
+
+    String userId(String email) { return jdbc.queryForObject("select id from users where email = ?", String.class, email); }
+
+    /** Adds a membership directly, bypassing the invitation flow, to set up role scenarios quickly. */
+    void addMember(String organizationId, String email, String role) {
+        jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) select random_uuid(), ?::uuid, id, ?, current_timestamp from users where email = ?",
+                organizationId, role, email);
+    }
 }
