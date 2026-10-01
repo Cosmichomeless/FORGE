@@ -26,7 +26,7 @@ public class SecurityConfig {
     @Bean CorsConfigurationSource cors(@Value("${app.frontend-origin}") String origin) {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(origin));
-        config.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN"));
         config.setAllowCredentials(true);
         var source = new UrlBasedCorsConfigurationSource();
