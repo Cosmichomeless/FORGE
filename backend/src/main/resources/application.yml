@@ -12,6 +12,7 @@ spring:
       mode: never
 app:
   frontend-origin: ${APP_FRONTEND_ORIGIN:http://localhost:3000}
+  invitation-ttl: ${APP_INVITATION_TTL:7d}
 server:
   servlet:
     session:

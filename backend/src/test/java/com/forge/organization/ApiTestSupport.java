@@ -27,6 +27,7 @@ abstract class ApiTestSupport {
     final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach void cleanDatabase() {
+        jdbc.update("delete from invitations");
         jdbc.update("delete from memberships");
         jdbc.update("delete from organizations");
         jdbc.update("delete from users");
