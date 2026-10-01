@@ -45,7 +45,8 @@ public class IssueQueryService {
     @Transactional
     public IssueResponse create(UUID organizationId, UUID projectId, User user, IssueRequest input) {
         organizations.requireMember(organizationId, user);
-        requireProject(organizationId, projectId);
+        // Do not load the Project entity before IssueService locks it: a cached copy would carry a stale issue counter.
+        if (!projects.existsByIdAndOrganizationId(projectId, organizationId)) throw ApiException.notFound("Project not found");
         if (input.assigneeId() != null) requireAssignable(organizationId, input.assigneeId());
         var created = numbering.create(projectId, user.getId(), input.title(), input.description());
         Issue issue = issues.findById(created.id()).orElseThrow();

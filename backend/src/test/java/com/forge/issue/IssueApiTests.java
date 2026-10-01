@@ -146,4 +146,22 @@ class IssueApiTests extends ApiTestSupport {
         c.ada().get(c.path() + "?status=BLOCKED").andExpect(status().isBadRequest());
         c.ada().get(otherPath).andExpect(jsonPath("$.totalItems").value(1)).andExpect(jsonPath("$.items[0].identifier").value("OTHER-1"));
     }
+    @Test void concurrentHttpCreationsGetDistinctNumbersPerProject() throws Exception {
+        Ctx c = setup();
+        var bob = signUp("Bob", "bob@example.com");
+        addMember(c.org(), "bob@example.com", "MEMBER");
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        try {
+            List<java.util.concurrent.Future<Integer>> results = new ArrayList<>();
+            for (int i = 0; i < 16; i++) {
+                Client who = i % 2 == 0 ? c.ada() : bob;
+                String title = "Concurrent " + i;
+                results.add(pool.submit(() -> who.json(who.post(c.path(), Map.of("title", title)).andExpect(status().isCreated())).get("number").asInt()));
+            }
+            Set<Integer> numbers = new TreeSet<>();
+            for (var result : results) numbers.add(result.get());
+            org.assertj.core.api.Assertions.assertThat(numbers).containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 16).boxed().toList());
+        } finally { pool.shutdown(); }
+        c.ada().get(c.path() + "?size=100").andExpect(jsonPath("$.totalItems").value(16));
+    }
 }

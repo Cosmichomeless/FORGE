@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public interface ProjectRepository extends JpaRepository<Project, UUID> {
     boolean existsByOrganizationIdAndKey(UUID organizationId, String key);
+    boolean existsByIdAndOrganizationId(UUID id, UUID organizationId);
     Optional<Project> findByIdAndOrganizationId(UUID id, UUID organizationId);
 
     @Query("select p from Project p where p.organizationId = :organizationId order by lower(p.name), p.id")
