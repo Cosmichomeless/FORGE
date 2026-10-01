@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/http";
+import { issuesApi } from "@/lib/issues-api";
 import { organizationsApi, type Organization } from "@/lib/organizations-api";
 import { projectsApi, type Project } from "@/lib/projects-api";
 import { ProjectOverview } from "./project-overview";
@@ -11,6 +12,11 @@ vi.mock("@/lib/organizations-api", () => ({ organizationsApi: { get: vi.fn() } }
 vi.mock("@/lib/projects-api", async original => ({
   ...await original<typeof import("@/lib/projects-api")>(),
   projectsApi: { get: vi.fn(), update: vi.fn(), archive: vi.fn(), restore: vi.fn(), list: vi.fn().mockResolvedValue([]) },
+}));
+
+vi.mock("@/lib/issues-api", async original => ({
+  ...await original<typeof import("@/lib/issues-api")>(),
+  issuesApi: { list: vi.fn().mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 }) },
 }));
 
 const org = (role: Organization["role"]) => ({ id: "o1", name: "Acme", slug: "acme", role }) as Organization;
@@ -23,7 +29,10 @@ const renderPage = () => render(
 );
 
 describe("ProjectOverview", () => {
-  beforeEach(() => { vi.resetAllMocks(); vi.mocked(projectsApi.list).mockResolvedValue([]); });
+  beforeEach(() => {
+    vi.resetAllMocks(); vi.mocked(projectsApi.list).mockResolvedValue([]);
+    vi.mocked(issuesApi.list).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 });
+  });
   afterEach(cleanup);
 
   it("shows read-only details to members", async () => {

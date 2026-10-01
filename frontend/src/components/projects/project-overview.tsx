@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/http";
 import { organizationsApi } from "@/lib/organizations-api";
 import { canManageOrganization } from "@/lib/permissions";
 import { projectKey, projectsApi, projectsKey, type Project } from "@/lib/projects-api";
+import { IssuesPanel } from "@/components/issues/issues-panel";
 import { EditProjectForm } from "./edit-project-form";
 
 const describe = (error: unknown) => error instanceof ApiError ? error.message : "Unable to connect. Please try again.";
@@ -58,6 +59,7 @@ export function ProjectOverview({ organizationId, projectId }: { organizationId:
       </header>
       {archived && <p role="status" className="rounded-md border p-3 text-sm">This project is archived. Its data is kept, but it is hidden from the active list and cannot be edited.</p>}
       {message && <p role="alert" className="text-sm text-red-600">{message}</p>}
+      <IssuesPanel organizationId={organizationId} projectId={projectId} archived={archived} />
       {canManage
         ? <section aria-labelledby="project-settings" className="space-y-4">
             <h2 id="project-settings" className="text-xl font-semibold">Settings</h2>
