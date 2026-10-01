@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/http";
 import { issueKey, issuePriorities, issueStatuses, issuesApi, issuesKey, priorityLabel, statusLabel, type Issue, type IssuePriority, type IssueStatus } from "@/lib/issues-api";
 import { organizationsApi } from "@/lib/organizations-api";
 import { projectKey, projectsApi } from "@/lib/projects-api";
+import { CommentThread } from "./comment-thread";
 import { issueDescriptionSchema, issueTitleSchema } from "./create-issue-form";
 
 const describe = (error: unknown) => error instanceof ApiError ? error.message : "Unable to connect. Please try again.";
@@ -116,6 +117,7 @@ export function IssueDetail({ organizationId, projectId, number }: { organizatio
         <h2 id="issue-edit" className="text-xl font-semibold">Edit</h2>
         <EditIssueForm key={data.updatedAt} issue={data} organizationId={organizationId} projectId={projectId} onSaved={updated => { void apply(updated); }} />
       </section>}
+      <CommentThread organizationId={organizationId} projectId={projectId} number={number} locked={locked} />
     </div>
   );
 }

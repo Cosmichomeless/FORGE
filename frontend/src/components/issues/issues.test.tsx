@@ -2,6 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { commentsApi, type Comment } from "@/lib/comments-api";
 import { ApiError } from "@/lib/http";
 import { issuesApi, type Issue, type IssuePage } from "@/lib/issues-api";
 import { organizationsApi } from "@/lib/organizations-api";
@@ -10,6 +11,7 @@ import { IssueDetail } from "./issue-detail";
 import { IssuesPanel } from "./issues-panel";
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
+vi.mock("@/lib/comments-api", async original => ({ ...await original<typeof import("@/lib/comments-api")>(), commentsApi: { list: vi.fn(), add: vi.fn(), edit: vi.fn(), remove: vi.fn() } }));
 vi.mock("@/lib/organizations-api", () => ({ organizationsApi: { members: vi.fn() } }));
 vi.mock("@/lib/projects-api", async original => ({ ...await original<typeof import("@/lib/projects-api")>(), projectsApi: { get: vi.fn() } }));
 vi.mock("@/lib/issues-api", async original => ({
@@ -91,6 +93,7 @@ describe("IssueDetail", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(projectsApi.get).mockResolvedValue(project);
+    vi.mocked(commentsApi.list).mockResolvedValue([]);
     vi.mocked(organizationsApi.members).mockResolvedValue([{ userId: "u2", name: "Grace", email: "g@x.dev", role: "MEMBER", joinedAt: "" }]);
   });
   afterEach(cleanup);
@@ -139,5 +142,80 @@ describe("IssueDetail", () => {
     vi.mocked(issuesApi.get).mockRejectedValue(new ApiError("Not found", 404));
     wrap(<IssueDetail organizationId="o1" projectId="p1" number="99" />);
     expect(await screen.findByText(/Issue not found/)).toBeTruthy();
+  });
+});
+
+describe("CommentThread", () => {
+  const project: Project = { id: "p1", organizationId: "o1", key: "WEB", name: "Website", description: null, status: "ACTIVE", createdAt: "", updatedAt: "", archivedAt: null };
+  const comment = (over: Partial<Comment> = {}): Comment => ({
+    id: "c1", issueId: "i1", body: "Hello", author: { id: "u1", name: "Ada" }, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z", canEdit: true, canDelete: true, ...over,
+  });
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(projectsApi.get).mockResolvedValue(project);
+    vi.mocked(issuesApi.get).mockResolvedValue(issue());
+    vi.mocked(organizationsApi.members).mockResolvedValue([]);
+  });
+  afterEach(cleanup);
+
+  it("shows comments in order and only offers permitted actions", async () => {
+    vi.mocked(commentsApi.list).mockResolvedValue([comment(), comment({ id: "c2", body: "Reply", author: { id: "u2", name: "Bob" }, canEdit: false, canDelete: false })]);
+    wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    expect(await screen.findByText("Hello")).toBeTruthy();
+    const items = screen.getAllByRole("listitem").filter(li => li.textContent?.includes("·"));
+    expect(items.map(li => li.textContent)).toEqual([expect.stringContaining("Hello"), expect.stringContaining("Reply")]);
+    expect(screen.getAllByRole("button", { name: "Delete" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(1);
+  });
+
+  it("sends a comment, refreshes the thread and shows the sending state", async () => {
+    vi.mocked(commentsApi.list).mockResolvedValueOnce([]).mockResolvedValue([comment({ body: "New one" })]);
+    vi.mocked(commentsApi.add).mockResolvedValue(comment({ body: "New one" }));
+    wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    await screen.findByText("No comments yet.");
+    await userEvent.type(screen.getByLabelText("Add a comment"), "New one");
+    await userEvent.click(screen.getByRole("button", { name: "Comment" }));
+    await waitFor(() => expect(commentsApi.add).toHaveBeenCalledWith("o1", "p1", "1", "New one"));
+    expect(await screen.findByText("New one")).toBeTruthy();
+  });
+
+  it("rejects empty comments and surfaces API errors", async () => {
+    vi.mocked(commentsApi.list).mockResolvedValue([]);
+    vi.mocked(commentsApi.add).mockRejectedValue(new ApiError("Archived projects are read-only", 409));
+    wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    await screen.findByText("No comments yet.");
+    await userEvent.click(screen.getByRole("button", { name: "Comment" }));
+    expect(await screen.findByText("Comment cannot be empty")).toBeTruthy();
+    expect(commentsApi.add).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByLabelText("Add a comment"), "Hi");
+    await userEvent.click(screen.getByRole("button", { name: "Comment" }));
+    expect(await screen.findByText("Archived projects are read-only")).toBeTruthy();
+  });
+
+  it("edits and deletes through the API", async () => {
+    const edited = comment({ body: "Changed", updatedAt: "2026-02-01T00:00:00Z" });
+    vi.mocked(commentsApi.list).mockResolvedValueOnce([comment()]).mockResolvedValueOnce([edited]).mockResolvedValue([]);
+    vi.mocked(commentsApi.edit).mockResolvedValue(edited);
+    vi.mocked(commentsApi.remove).mockResolvedValue(undefined);
+    wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    const box = screen.getByLabelText("Edit comment");
+    await userEvent.clear(box);
+    await userEvent.type(box, "Changed");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(commentsApi.edit).toHaveBeenCalledWith("o1", "p1", "1", "c1", "Changed"));
+    expect(await screen.findByText("Changed")).toBeTruthy();
+    expect(screen.getByText(/\(edited\)/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText("No comments yet.")).toBeTruthy();
+    expect(commentsApi.remove).toHaveBeenCalledWith("o1", "p1", "1", "c1");
+  });
+
+  it("closes commenting on archived projects", async () => {
+    vi.mocked(projectsApi.get).mockResolvedValue({ ...project, status: "ARCHIVED" });
+    vi.mocked(commentsApi.list).mockResolvedValue([comment({ canEdit: false, canDelete: false })]);
+    wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    expect(await screen.findByText(/Comments are closed/)).toBeTruthy();
+    expect(screen.queryByLabelText("Add a comment")).toBeNull();
   });
 });
