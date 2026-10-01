@@ -7,6 +7,8 @@ import { ApiError } from "@/lib/http";
 import { organizationsApi } from "@/lib/organizations-api";
 import { canManageOrganization } from "@/lib/permissions";
 import { EditOrganizationForm } from "./edit-organization-form";
+import { InvitationsPanel } from "./invitations-panel";
+import { MembersPanel } from "./members-panel";
 import { organizationsKey, useOrganizations } from "./organization-provider";
 
 export function OrganizationDetail({ organizationId }: { organizationId: string }) {
@@ -37,6 +39,8 @@ export function OrganizationDetail({ organizationId }: { organizationId: string 
       {canEdit
         ? <section aria-labelledby="org-settings" className="space-y-4"><h2 id="org-settings" className="text-xl font-semibold">Settings</h2><EditOrganizationForm key={organization.id + organization.name + organization.slug} organization={organization} /></section>
         : <p className="text-sm">Only owners and admins can edit this organization.</p>}
+      <MembersPanel organization={organization} />
+      {canEdit && <InvitationsPanel organization={organization} />}
     </div>
   );
 }
