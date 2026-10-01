@@ -4,14 +4,14 @@
 
 **Un espacio de gestión de proyectos, construido paso a paso.**
 
-![Estado](https://img.shields.io/badge/estado-auth-blue)
+![Estado](https://img.shields.io/badge/estado-organizaciones-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>
 
-FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Actualmente incluye registro e inicio de sesión con Spring Security, un área privada básica, PostgreSQL local y migraciones. **Todavía no implementa organizaciones, proyectos ni tickets; no hay demo pública ni release de producción.**
+FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Actualmente incluye registro e inicio de sesión con Spring Security, organizaciones multiusuario con roles (OWNER, ADMIN, MEMBER) e invitaciones con caducidad, PostgreSQL local y migraciones. **Todavía no implementa proyectos ni tickets; no hay demo pública ni release de producción.**
 
 ## Arquitectura
 
@@ -86,7 +86,7 @@ npm ci
 npm run dev
 ```
 
-Abre http://localhost:3000. Desde la página inicial puedes ir a /register y /login. Tras iniciar sesión accedes a /dashboard, un área privada básica sin funciones de proyectos aún.
+Abre http://localhost:3000. Desde la página inicial puedes ir a /register y /login. Tras iniciar sesión accedes a /dashboard. Desde /organizations creas una organización y cambias de organización activa con el selector de la barra superior; en /organizations/{id} gestionas ajustes, miembros e invitaciones según tu rol. Aún no hay proyectos.
 
 ## Verificación
 
@@ -151,16 +151,35 @@ El frontend resuelve /me antes de mostrar contenido privado y redirige al login 
 
 ### Tests de autenticación con PostgreSQL
 
-La suite normal usa H2 y un servidor embebido para verificar cookies. AuthTests también puede ejecutarse contra PostgreSQL con AUTH_TEST_DB_URL, AUTH_TEST_DB_USER y AUTH_TEST_DB_PASSWORD. **Usa exclusivamente una base separada y desechable: esta clase elimina los usuarios entre tests. Nunca apuntes a desarrollo compartido o producción.**
+La suite normal usa H2 y un servidor embebido para verificar cookies. AuthTests y las pruebas de organizaciones también pueden ejecutarse contra PostgreSQL con AUTH_TEST_DB_URL, AUTH_TEST_DB_USER y AUTH_TEST_DB_PASSWORD. **Usa exclusivamente una base separada y desechable: estas clases eliminan usuarios, organizaciones, membresías e invitaciones entre tests. Nunca apuntes a desarrollo compartido o producción.**
 
 ```bash
 # Variables exportadas previamente para una base PostgreSQL de pruebas dedicada:
-(cd backend && mvn -Dtest=AuthTests test)
+(cd backend && mvn -Dtest='AuthTests,Organization*Tests,InvitationTests,MemberTests' test)
 ```
+
+## Organizaciones y roles
+
+Todos los endpoints requieren sesión y, en operaciones no seguras, CSRF. Una organización ajena se comporta como inexistente (404); un rol insuficiente devuelve 403.
+
+| Endpoint | Quién | Resultado |
+| --- | --- | --- |
+| POST /api/v1/organizations | Autenticado | Crea la organización (name, slug único) y al creador como OWNER en la misma transacción. |
+| GET /api/v1/organizations | Autenticado | Solo organizaciones donde eres miembro, con tu rol. |
+| GET/PUT /api/v1/organizations/{id} | Miembro / OWNER, ADMIN | Consulta y edición de name y slug. |
+| GET/POST /api/v1/organizations/{id}/invitations | OWNER, ADMIN | Lista las pendientes y crea una invitación (email, rol ADMIN o MEMBER). |
+| DELETE /api/v1/organizations/{id}/invitations/{invitationId} | OWNER, ADMIN | Revoca una invitación pendiente. |
+| POST /api/v1/invitations/accept | Usuario invitado | Acepta con el token (body) y crea una única membresía. |
+| GET /api/v1/organizations/{id}/members | Miembro | Lista de miembros. |
+| PUT/DELETE /api/v1/organizations/{id}/members/{userId} | Ver abajo | Cambia rol o retira miembros. |
+
+Reglas de miembros: OWNER gestiona a todos; ADMIN solo gestiona MEMBER (puede ascenderlo a ADMIN); MEMBER no gestiona a nadie, pero puede salir de la organización. Una organización siempre conserva al menos un OWNER, incluso con peticiones concurrentes (bloqueo de la fila de la organización).
+
+Invitaciones: caducan a los 7 días (APP_INVITATION_TTL, p. ej. 3d o 12h) y solo se guarda el hash SHA-256 del token. **El token se muestra una única vez al crearla** como enlace /invitations/accept#token=… (el fragmento no viaja al servidor). Debe aceptarla un usuario autenticado cuyo email coincide con el invitado; caducadas, usadas o de otro email se rechazan (410, 409, 403). **Limitaciones actuales:** no se envían correos, el creador comparte el enlace manualmente, y si el invitado no tiene sesión el redireccionamiento al login pierde el fragmento (puede pegar el token en /invitations/accept).
 
 ## Roadmap y contribuciones
 
-Las issues de GitHub son la fuente de seguimiento. La siguiente etapa añade organizaciones, proyectos, tickets, colaboración y más pruebas. Docker del stack completo, CI y despliegue en Azure siguen pendientes. No se promete ninguna extensión (Redis/WebSockets) en esta base.
+Las issues de GitHub son la fuente de seguimiento. La siguiente etapa añade proyectos, tickets, colaboración y más pruebas. Docker del stack completo, CI y despliegue en Azure siguen pendientes. No se promete ninguna extensión (Redis/WebSockets) en esta base.
 
 Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para ramas cortas, Conventional Commits, comprobaciones y Definition of Done. Las plantillas de issues y PR están en .github/. Todavía no hay checks de CI configurados: ejecuta las comprobaciones manuales antes de solicitar revisión.
 
