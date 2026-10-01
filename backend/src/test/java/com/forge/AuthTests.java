@@ -32,7 +32,7 @@ class AuthTests {
     private String header;
 
     @BeforeEach void setup() throws Exception {
-        for (String table : java.util.List.of("invitations", "memberships", "organizations", "users")) {
+        for (String table : java.util.List.of("issues", "projects", "invitations", "memberships", "organizations", "users")) {
             if (jdbc.queryForObject("select count(*) from information_schema.tables where lower(table_schema) = 'public' and lower(table_name) = ?", Integer.class, table) > 0) {
                 jdbc.update("delete from " + table);
             }

@@ -61,12 +61,12 @@ public class OrganizationService {
     }
 
     /** Returns the caller's membership; organizations of others look nonexistent (404). */
-    Membership requireMember(UUID organizationId, User user) {
+    public Membership requireMember(UUID organizationId, User user) {
         return memberships.findByOrganizationIdAndUserId(organizationId, user.getId())
                 .orElseThrow(() -> ApiException.notFound("Organization not found"));
     }
 
-    static void requireManager(Membership membership) {
+    public static void requireManager(Membership membership) {
         if (!membership.getRole().canManageOrganization()) throw ApiException.forbidden("Only owners and admins can do this");
     }
 

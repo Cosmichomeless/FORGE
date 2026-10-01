@@ -21,12 +21,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.username=${AUTH_TEST_DB_USER:sa}", "spring.datasource.password=${AUTH_TEST_DB_PASSWORD:}"
 })
 @AutoConfigureMockMvc
-abstract class ApiTestSupport {
-    @Autowired MockMvc mvc;
-    @Autowired JdbcTemplate jdbc;
-    final ObjectMapper mapper = new ObjectMapper();
+public abstract class ApiTestSupport {
+    @Autowired protected MockMvc mvc;
+    @Autowired protected JdbcTemplate jdbc;
+    protected final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach void cleanDatabase() {
+        jdbc.update("delete from issues");
+        jdbc.update("delete from projects");
         jdbc.update("delete from invitations");
         jdbc.update("delete from memberships");
         jdbc.update("delete from organizations");
@@ -34,8 +36,8 @@ abstract class ApiTestSupport {
     }
 
     /** A signed-in browser: session cookie plus the CSRF token it must echo on unsafe requests. */
-    final class Client {
-        final String email;
+    public final class Client {
+        public final String email;
         private final MockHttpSession session = new MockHttpSession();
         private String token;
         private String header;
@@ -51,17 +53,17 @@ abstract class ApiTestSupport {
             request.session(session).header(header, token);
             return body == null ? request : request.contentType("application/json").content(mapper.writeValueAsString(body));
         }
-        ResultActions get(String path) throws Exception { return mvc.perform(MockMvcRequestBuilders.get(path).session(session)); }
-        ResultActions post(String path, Object body) throws Exception { return mvc.perform(withBody(MockMvcRequestBuilders.post(path), body)); }
-        ResultActions put(String path, Object body) throws Exception { return mvc.perform(withBody(MockMvcRequestBuilders.put(path), body)); }
-        ResultActions delete(String path) throws Exception { return mvc.perform(withBody(MockMvcRequestBuilders.delete(path), null)); }
-        JsonNode json(ResultActions result) throws Exception { return mapper.readTree(result.andReturn().getResponse().getContentAsString()); }
-        String createOrganization(String name, String slug) throws Exception {
+        public ResultActions get(String path) throws Exception { return mvc.perform(MockMvcRequestBuilders.get(path).session(session)); }
+        public ResultActions post(String path, Object body) throws Exception { return mvc.perform(withBody(MockMvcRequestBuilders.post(path), body)); }
+        public ResultActions put(String path, Object body) throws Exception { return mvc.perform(withBody(MockMvcRequestBuilders.put(path), body)); }
+        public ResultActions delete(String path) throws Exception { return mvc.perform(withBody(MockMvcRequestBuilders.delete(path), null)); }
+        public JsonNode json(ResultActions result) throws Exception { return mapper.readTree(result.andReturn().getResponse().getContentAsString()); }
+        public String createOrganization(String name, String slug) throws Exception {
             return json(post("/api/v1/organizations", Map.of("name", name, "slug", slug)).andExpect(status().isCreated())).get("id").asText();
         }
     }
 
-    Client signUp(String name, String email) throws Exception {
+    protected Client signUp(String name, String email) throws Exception {
         Client client = new Client(email);
         client.refreshCsrf();
         Map<String, String> credentials = Map.of("email", email, "password", "password123");
@@ -75,10 +77,10 @@ abstract class ApiTestSupport {
         return client.withBody(request, body);
     }
 
-    String userId(String email) { return jdbc.queryForObject("select id from users where email = ?", String.class, email); }
+    protected String userId(String email) { return jdbc.queryForObject("select id from users where email = ?", String.class, email); }
 
     /** Adds a membership directly, bypassing the invitation flow, to set up role scenarios quickly. */
-    void addMember(String organizationId, String email, String role) {
+    protected void addMember(String organizationId, String email, String role) {
         jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) select ?::uuid, ?::uuid, id, ?, current_timestamp from users where email = ?",
                 java.util.UUID.randomUUID().toString(), organizationId, role, email);
     }
