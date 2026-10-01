@@ -30,9 +30,9 @@ class OrganizationApiTests extends ApiTestSupport {
         String id = ada.createOrganization("Acme", "acme");
         String userId = jdbc.queryForObject("select id from users", String.class);
         org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () ->
-                jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) values (random_uuid(), ?::uuid, ?::uuid, 'MEMBER', current_timestamp)", id, userId));
+                jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) values (?::uuid, ?::uuid, ?::uuid, 'MEMBER', current_timestamp)", java.util.UUID.randomUUID().toString(), id, userId));
         org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () ->
-                jdbc.update("insert into organizations (id, name, slug, created_at) values (random_uuid(), 'Dup', 'acme', current_timestamp)"));
+                jdbc.update("insert into organizations (id, name, slug, created_at) values (?::uuid, 'Dup', 'acme', current_timestamp)", java.util.UUID.randomUUID().toString()));
         org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () ->
                 jdbc.update("update memberships set role = 'BOSS'"));
     }

@@ -8,6 +8,8 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class InvitationTests extends ApiTestSupport {
+    @org.springframework.beans.factory.annotation.Autowired InvitationRepository invitations;
+
     private String invite(Client who, String organizationId, String email, String role) throws Exception {
         return who.json(who.post("/api/v1/organizations/" + organizationId + "/invitations", Map.of("email", email, "role", role))
                 .andExpect(status().isCreated())).get("token").asText();
@@ -20,11 +22,9 @@ class InvitationTests extends ApiTestSupport {
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.email").value("new@example.com"))
                 .andExpect(jsonPath("$.role").value("MEMBER")).andExpect(jsonPath("$.expiresAt").exists())
                 .andExpect(jsonPath("$.token").isNotEmpty());
-        var stored = jdbc.queryForMap("select token_hash, created_at, expires_at from invitations");
-        assertThat((String) stored.get("token_hash")).hasSize(64).matches("[0-9a-f]+");
-        var created = ((java.time.OffsetDateTime) stored.get("created_at")).toInstant();
-        var expires = ((java.time.OffsetDateTime) stored.get("expires_at")).toInstant();
-        assertThat(java.time.Duration.between(created, expires)).isEqualTo(java.time.Duration.ofDays(7));
+        assertThat(jdbc.queryForObject("select token_hash from invitations", String.class)).hasSize(64).matches("[0-9a-f]+");
+        var stored = invitations.findAll().getFirst();
+        assertThat(java.time.Duration.between(stored.getCreatedAt(), stored.getExpiresAt())).isEqualTo(java.time.Duration.ofDays(7));
     }
     @Test void membersAndOutsidersCannotInvite() throws Exception {
         var ada = signUp("Ada", "ada@example.com");

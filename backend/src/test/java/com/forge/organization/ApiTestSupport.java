@@ -17,8 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Shared MockMvc scaffolding: real sessions and CSRF tokens, one isolated in-memory database. */
 @SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:organizations;MODE=PostgreSQL;NON_KEYWORDS=KEY,VALUE",
-        "spring.datasource.username=sa", "spring.datasource.password="
+        "spring.datasource.url=${AUTH_TEST_DB_URL:jdbc:h2:mem:organizations;MODE=PostgreSQL;NON_KEYWORDS=KEY,VALUE}",
+        "spring.datasource.username=${AUTH_TEST_DB_USER:sa}", "spring.datasource.password=${AUTH_TEST_DB_PASSWORD:}"
 })
 @AutoConfigureMockMvc
 abstract class ApiTestSupport {
@@ -79,7 +79,7 @@ abstract class ApiTestSupport {
 
     /** Adds a membership directly, bypassing the invitation flow, to set up role scenarios quickly. */
     void addMember(String organizationId, String email, String role) {
-        jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) select random_uuid(), ?::uuid, id, ?, current_timestamp from users where email = ?",
-                organizationId, role, email);
+        jdbc.update("insert into memberships (id, organization_id, user_id, role, created_at) select ?::uuid, ?::uuid, id, ?, current_timestamp from users where email = ?",
+                java.util.UUID.randomUUID().toString(), organizationId, role, email);
     }
 }
