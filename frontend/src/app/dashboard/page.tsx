@@ -1,4 +1,5 @@
 import { PrivateShell } from "@/components/auth/private-shell";
+import { PersonalDashboard } from "@/components/dashboard/personal-dashboard";
 import { ActiveOrganizationSummary } from "@/components/organizations/active-organization-summary";
 
 export default function DashboardPage() {
@@ -6,5 +7,6 @@ export default function DashboardPage() {
     <h1 className="text-3xl font-semibold">Dashboard</h1>
     <p className="mt-4">Welcome to FORGE.</p>
     <ActiveOrganizationSummary />
+    <PersonalDashboard />
   </PrivateShell></main>;
 }

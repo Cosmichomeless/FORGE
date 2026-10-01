@@ -8,7 +8,8 @@ import { organizationsApi, type Organization } from "@/lib/organizations-api";
 import { projectsApi, type Project } from "@/lib/projects-api";
 import { ProjectOverview } from "./project-overview";
 
-vi.mock("@/lib/organizations-api", () => ({ organizationsApi: { get: vi.fn() } }));
+vi.mock("@/lib/organizations-api", () => ({ organizationsApi: { get: vi.fn(), members: vi.fn().mockResolvedValue([]) } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/p", useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/lib/projects-api", async original => ({
   ...await original<typeof import("@/lib/projects-api")>(),
   projectsApi: { get: vi.fn(), update: vi.fn(), archive: vi.fn(), restore: vi.fn(), list: vi.fn().mockResolvedValue([]) },
@@ -30,7 +31,7 @@ const renderPage = () => render(
 
 describe("ProjectOverview", () => {
   beforeEach(() => {
-    vi.resetAllMocks(); vi.mocked(projectsApi.list).mockResolvedValue([]);
+    vi.resetAllMocks(); vi.mocked(organizationsApi.members).mockResolvedValue([]); vi.mocked(projectsApi.list).mockResolvedValue([]);
     vi.mocked(issuesApi.list).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 });
   });
   afterEach(cleanup);

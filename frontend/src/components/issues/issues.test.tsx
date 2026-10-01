@@ -13,6 +13,16 @@ import { IssuesPanel } from "./issues-panel";
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 vi.mock("@/lib/comments-api", async original => ({ ...await original<typeof import("@/lib/comments-api")>(), commentsApi: { list: vi.fn(), add: vi.fn(), edit: vi.fn(), remove: vi.fn() } }));
 vi.mock("@/lib/organizations-api", () => ({ organizationsApi: { members: vi.fn() } }));
+const url = vi.hoisted(() => ({ search: "", listeners: new Set<() => void>() }));
+vi.mock("next/navigation", async () => {
+  const react = await import("react");
+  const subscribe = (listener: () => void) => { url.listeners.add(listener); return () => { url.listeners.delete(listener); }; };
+  return {
+    usePathname: () => "/projects/p1",
+    useRouter: () => ({ replace: (target: string) => { url.search = target.includes("?") ? target.slice(target.indexOf("?")) : ""; url.listeners.forEach(l => l()); } }),
+    useSearchParams: () => new URLSearchParams(react.useSyncExternalStore(subscribe, () => url.search, () => url.search)),
+  };
+});
 vi.mock("@/lib/projects-api", async original => ({ ...await original<typeof import("@/lib/projects-api")>(), projectsApi: { get: vi.fn() } }));
 vi.mock("@/lib/issues-api", async original => ({
   ...await original<typeof import("@/lib/issues-api")>(),
@@ -27,7 +37,7 @@ const page = (items: Issue[], over: Partial<IssuePage> = {}): IssuePage => ({ it
 const wrap = (ui: React.ReactNode) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>);
 
 describe("IssuesPanel", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => { vi.resetAllMocks(); url.search = ""; vi.mocked(organizationsApi.members).mockResolvedValue([{ userId: "u2", name: "Grace", email: "g@x.dev", role: "MEMBER", joinedAt: "" }]); });
   afterEach(cleanup);
 
   it("shows an empty state", async () => {
@@ -40,9 +50,10 @@ describe("IssuesPanel", () => {
     vi.mocked(issuesApi.list).mockResolvedValue(page([issue(), issue({ id: "i2", number: 2, identifier: "WEB-2", title: "Add search", status: "DONE", assignee: { id: "u2", name: "Grace" } })]));
     wrap(<IssuesPanel organizationId="o1" projectId="p1" archived={false} />);
     expect(await screen.findByText("WEB-1")).toBeTruthy();
-    expect(screen.getByText("Unassigned")).toBeTruthy();
-    expect(screen.getByText("Grace")).toBeTruthy();
-    expect(screen.getByText("Done")).toBeTruthy();
+    const rows = screen.getAllByRole("listitem");
+    expect(rows[0].textContent).toContain("Unassigned");
+    expect(rows[1].textContent).toContain("Grace");
+    expect(rows[1].textContent).toContain("Done");
     expect(screen.getByRole("link", { name: "Fix login" }).getAttribute("href")).toBe("/organizations/o1/projects/p1/issues/1");
   });
 
@@ -54,6 +65,36 @@ describe("IssuesPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(await screen.findByText("Second page")).toBeTruthy();
     expect(screen.getByText(/Page 2 of 2/)).toBeTruthy();
+  });
+
+  it("reads filters from the URL, ignoring invalid values", async () => {
+    url.search = "?q=login&status=DONE&priority=bogus&assignee=none&page=2";
+    vi.mocked(issuesApi.list).mockResolvedValue(page([issue()], { page: 1, totalItems: 21, totalPages: 2 }));
+    wrap(<IssuesPanel organizationId="o1" projectId="p1" archived={false} />);
+    await screen.findByText("Fix login");
+    expect(issuesApi.list).toHaveBeenCalledWith("o1", "p1", { page: 1, size: 20, q: "login", status: "DONE", priority: "", assignee: "none" }, expect.anything());
+  });
+
+  it("combines filters, resets the page and clears them", async () => {
+    url.search = "?page=2";
+    vi.mocked(issuesApi.list).mockResolvedValue(page([issue()], { page: 1, totalItems: 21, totalPages: 2 }));
+    wrap(<IssuesPanel organizationId="o1" projectId="p1" archived={false} />);
+    await screen.findByText("Fix login");
+    await userEvent.selectOptions(screen.getByLabelText("Status"), "DONE");
+    await waitFor(() => expect(url.search).toBe("?status=DONE"));
+    await userEvent.type(screen.getByLabelText("Search"), "login{Enter}");
+    await waitFor(() => expect(new URLSearchParams(url.search).get("q")).toBe("login"));
+    expect(new URLSearchParams(url.search).get("status")).toBe("DONE");
+    await waitFor(() => expect(issuesApi.list).toHaveBeenLastCalledWith("o1", "p1", expect.objectContaining({ page: 0, q: "login", status: "DONE" }), expect.anything()));
+    await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => expect(url.search).toBe(""));
+  });
+
+  it("shows a filtered empty state", async () => {
+    url.search = "?status=DONE";
+    vi.mocked(issuesApi.list).mockResolvedValue(page([]));
+    wrap(<IssuesPanel organizationId="o1" projectId="p1" archived={false} />);
+    expect(await screen.findByText("No issues match these filters.")).toBeTruthy();
   });
 
   it("shows an error with retry", async () => {
