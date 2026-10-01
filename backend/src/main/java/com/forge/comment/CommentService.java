@@ -1,5 +1,7 @@
 package com.forge.comment;
 
+import com.forge.activity.ActivityRecorder;
+import com.forge.activity.ActivityType;
 import com.forge.auth.User;
 import com.forge.auth.UserRepository;
 import com.forge.common.ApiException;
@@ -29,10 +31,11 @@ public class CommentService {
     private final ProjectRepository projects;
     private final OrganizationService organizations;
     private final UserRepository users;
+    private final ActivityRecorder activity;
     private final Clock clock;
     public CommentService(CommentRepository comments, IssueRepository issues, ProjectRepository projects, OrganizationService organizations,
-                          UserRepository users, Clock clock) {
-        this.comments = comments; this.issues = issues; this.projects = projects; this.organizations = organizations; this.users = users; this.clock = clock;
+                          UserRepository users, ActivityRecorder activity, Clock clock) {
+        this.comments = comments; this.issues = issues; this.projects = projects; this.organizations = organizations; this.users = users; this.activity = activity; this.clock = clock;
     }
 
     private record Scope(Membership membership, Project project, Issue issue, User caller) {}
@@ -59,7 +62,9 @@ public class CommentService {
     public CommentResponse add(UUID organizationId, UUID projectId, long number, User user, CommentRequest input) {
         Scope s = scope(organizationId, projectId, number, user);
         requireWritable(s.project());
-        Comment comment = comments.save(new Comment(s.issue().getId(), user.getId(), input.body(), Instant.now(clock)));
+        Instant now = Instant.now(clock);
+        Comment comment = comments.save(new Comment(s.issue().getId(), user.getId(), input.body(), now));
+        activity.record(s.issue().getId(), user.getId(), ActivityType.COMMENTED, null, comment.getId(), now);
         return toResponse(comment, user, s);
     }
 

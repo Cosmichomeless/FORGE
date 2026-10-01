@@ -23,7 +23,7 @@ public final class IssueDtos {
     public record PriorityRequest(@NotNull IssuePriority priority) {}
 
     public record PersonResponse(UUID id, String name) {
-        static PersonResponse of(User user) { return user == null ? null : new PersonResponse(user.getId(), user.getName()); }
+        public static PersonResponse of(User user) { return user == null ? null : new PersonResponse(user.getId(), user.getName()); }
     }
     public record IssueResponse(UUID id, UUID projectId, long number, String identifier, String title, String description,
                                 IssueStatus status, IssuePriority priority, PersonResponse assignee, PersonResponse createdBy,

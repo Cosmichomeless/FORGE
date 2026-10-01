@@ -1,5 +1,7 @@
 package com.forge.issue;
 
+import com.forge.activity.ActivityRecorder;
+import com.forge.activity.ActivityType;
 import com.forge.auth.User;
 import com.forge.auth.UserRepository;
 import com.forge.common.ApiException;
@@ -35,11 +37,12 @@ public class IssueQueryService {
     private final OrganizationService organizations;
     private final MembershipRepository memberships;
     private final UserRepository users;
+    private final ActivityRecorder activity;
     private final Clock clock;
     public IssueQueryService(ProjectRepository projects, IssueRepository issues, IssueService numbering, OrganizationService organizations,
-                             MembershipRepository memberships, UserRepository users, Clock clock) {
+                             MembershipRepository memberships, UserRepository users, ActivityRecorder activity, Clock clock) {
         this.projects = projects; this.issues = issues; this.numbering = numbering; this.organizations = organizations;
-        this.memberships = memberships; this.users = users; this.clock = clock;
+        this.memberships = memberships; this.users = users; this.activity = activity; this.clock = clock;
     }
 
     @Transactional
@@ -51,8 +54,12 @@ public class IssueQueryService {
         var created = numbering.create(projectId, user.getId(), input.title(), input.description());
         Issue issue = issues.findById(created.id()).orElseThrow();
         Instant now = Instant.now(clock);
+        activity.record(issue.getId(), user.getId(), ActivityType.CREATED, null, null, now);
         if (input.priority() != null) issue.changePriority(input.priority(), now);
-        if (input.assigneeId() != null) issue.assignTo(input.assigneeId(), now);
+        if (input.assigneeId() != null) {
+            issue.assignTo(input.assigneeId(), now);
+            activity.record(issue.getId(), user.getId(), ActivityType.ASSIGNED, null, input.assigneeId(), now);
+        }
         return respond(issue, projects.findById(projectId).orElseThrow());
     }
 
@@ -100,21 +107,27 @@ public class IssueQueryService {
     public IssueResponse assign(UUID organizationId, UUID projectId, long number, User user, AssigneeRequest input) {
         Issue issue = writable(organizationId, projectId, number, user);
         if (input.assigneeId() != null) requireAssignable(organizationId, input.assigneeId());
-        issue.assignTo(input.assigneeId(), Instant.now(clock));
+        Instant now = Instant.now(clock);
+        activity.recordChange(issue.getId(), user.getId(), ActivityType.ASSIGNED, issue.getAssigneeId(), input.assigneeId(), now);
+        issue.assignTo(input.assigneeId(), now);
         return respond(issue, projects.findById(projectId).orElseThrow());
     }
 
     @Transactional
     public IssueResponse changeStatus(UUID organizationId, UUID projectId, long number, User user, StatusRequest input) {
         Issue issue = writable(organizationId, projectId, number, user);
-        issue.changeStatus(input.status(), Instant.now(clock));
+        Instant now = Instant.now(clock);
+        activity.recordChange(issue.getId(), user.getId(), ActivityType.STATUS_CHANGED, issue.getStatus(), input.status(), now);
+        issue.changeStatus(input.status(), now);
         return respond(issue, projects.findById(projectId).orElseThrow());
     }
 
     @Transactional
     public IssueResponse changePriority(UUID organizationId, UUID projectId, long number, User user, PriorityRequest input) {
         Issue issue = writable(organizationId, projectId, number, user);
-        issue.changePriority(input.priority(), Instant.now(clock));
+        Instant now = Instant.now(clock);
+        activity.recordChange(issue.getId(), user.getId(), ActivityType.PRIORITY_CHANGED, issue.getPriority(), input.priority(), now);
+        issue.changePriority(input.priority(), now);
         return respond(issue, projects.findById(projectId).orElseThrow());
     }
 
