@@ -58,7 +58,7 @@ public class IssueQueryService {
 
     @Transactional(readOnly = true)
     public IssuePage list(UUID organizationId, UUID projectId, User user, int page, int size, IssueSort sort, boolean descending,
-                          IssueStatus status, IssuePriority priority, UUID assigneeId, boolean unassigned) {
+                          IssueStatus status, IssuePriority priority, UUID assigneeId, boolean unassigned, String q) {
         organizations.requireMember(organizationId, user);
         Project project = requireProject(organizationId, projectId);
         Specification<Issue> spec = (root, query, cb) -> {
@@ -68,6 +68,8 @@ public class IssueQueryService {
             if (priority != null) all.add(cb.equal(root.get("priority"), priority));
             if (unassigned) all.add(cb.isNull(root.get("assigneeId")));
             else if (assigneeId != null) all.add(cb.equal(root.get("assigneeId"), assigneeId));
+            Predicate match = IssueSearch.match(q, project.getKey().equals(IssueSearch.keyOf(q)) ? project.getId() : null, IssueSearch.numberOf(q), root, cb);
+            if (match != null) all.add(match);
             return cb.and(all.toArray(Predicate[]::new));
         };
         String property = switch (sort) { case NUMBER -> "number"; case CREATED_AT -> "createdAt"; case UPDATED_AT -> "updatedAt"; case TITLE -> "title"; };
@@ -138,7 +140,7 @@ public class IssueQueryService {
         return users.findAllById(ids).stream().collect(Collectors.toMap(User::getId, Function.identity()));
     }
     private IssueResponse respond(Issue issue, Project project) { return toResponse(issue, project, loadPeople(List.of(issue))); }
-    private static IssueResponse toResponse(Issue issue, Project project, Map<UUID, User> people) {
+    static IssueResponse toResponse(Issue issue, Project project, Map<UUID, User> people) {
         return new IssueResponse(issue.getId(), issue.getProjectId(), issue.getNumber(), project.getKey() + "-" + issue.getNumber(),
                 issue.getTitle(), issue.getDescription(), issue.getStatus(), issue.getPriority(),
                 PersonResponse.of(people.get(issue.getAssigneeId())), PersonResponse.of(people.get(issue.getCreatedBy())),

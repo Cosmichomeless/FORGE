@@ -20,13 +20,13 @@ public class IssueController {
     IssueResponse create(@PathVariable UUID organizationId, @PathVariable UUID projectId, @Valid @RequestBody IssueRequest input, Authentication auth) {
         return service.create(organizationId, projectId, currentUser.require(auth), input);
     }
-    /** Filters combine with AND; assignee=none lists unassigned issues. */
+    /** Filters combine with AND; assignee=none lists unassigned issues; q matches an exact key (FORGE-12) or part of the title. */
     @GetMapping
     IssuePage list(@PathVariable UUID organizationId, @PathVariable UUID projectId,
                    @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
                    @RequestParam(defaultValue = "NUMBER") IssueSort sort, @RequestParam(defaultValue = "desc") String direction,
                    @RequestParam(required = false) IssueStatus status, @RequestParam(required = false) IssuePriority priority,
-                   @RequestParam(required = false) String assignee, Authentication auth) {
+                   @RequestParam(required = false) String assignee, @RequestParam(required = false) String q, Authentication auth) {
         boolean unassigned = "none".equalsIgnoreCase(assignee);
         UUID assigneeId = null;
         if (assignee != null && !unassigned) {
@@ -34,7 +34,7 @@ public class IssueController {
             catch (IllegalArgumentException ex) { throw new ApiException(400, "assignee must be a user id or 'none'"); }
         }
         return service.list(organizationId, projectId, currentUser.require(auth), page, size, sort, !"asc".equalsIgnoreCase(direction),
-                status, priority, assigneeId, unassigned);
+                status, priority, assigneeId, unassigned, q);
     }
     @GetMapping("/{number}")
     IssueResponse get(@PathVariable UUID organizationId, @PathVariable UUID projectId, @PathVariable long number, Authentication auth) {

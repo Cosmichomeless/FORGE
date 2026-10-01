@@ -13,6 +13,7 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
     boolean existsByOrganizationIdAndKey(UUID organizationId, String key);
     boolean existsByIdAndOrganizationId(UUID id, UUID organizationId);
     Optional<Project> findByIdAndOrganizationId(UUID id, UUID organizationId);
+    Optional<Project> findByOrganizationIdAndKey(UUID organizationId, String key);
 
     @Query("select p from Project p where p.organizationId = :organizationId order by lower(p.name), p.id")
     List<Project> findAllInOrganization(@Param("organizationId") UUID organizationId);

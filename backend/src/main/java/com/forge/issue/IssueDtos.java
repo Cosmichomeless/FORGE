@@ -30,4 +30,7 @@ public final class IssueDtos {
                                 Instant createdAt, Instant updatedAt) {}
     public record IssuePage(List<IssueResponse> items, int page, int size, long totalItems, int totalPages) {}
     public enum IssueSort { NUMBER, CREATED_AT, UPDATED_AT, TITLE }
+    public record DashboardIssue(UUID organizationId, String organizationName, String projectName, IssueResponse issue) {}
+    public record RecentProject(UUID organizationId, String organizationName, UUID projectId, String key, String name, Instant lastActivityAt) {}
+    public record DashboardResponse(List<DashboardIssue> assigned, java.util.Map<IssueStatus, Long> counts, List<RecentProject> recentProjects) {}
 }
