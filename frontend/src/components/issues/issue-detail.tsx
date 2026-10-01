@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/http";
 import { issueKey, issuePriorities, issueStatuses, issuesApi, issuesKey, priorityLabel, statusLabel, type Issue, type IssuePriority, type IssueStatus } from "@/lib/issues-api";
 import { organizationsApi } from "@/lib/organizations-api";
 import { projectKey, projectsApi } from "@/lib/projects-api";
+import { ActivityTimeline } from "./activity-timeline";
 import { CommentThread } from "./comment-thread";
 import { issueDescriptionSchema, issueTitleSchema } from "./create-issue-form";
 
@@ -118,6 +119,7 @@ export function IssueDetail({ organizationId, projectId, number }: { organizatio
         <EditIssueForm key={data.updatedAt} issue={data} organizationId={organizationId} projectId={projectId} onSaved={updated => { void apply(updated); }} />
       </section>}
       <CommentThread organizationId={organizationId} projectId={projectId} number={number} locked={locked} />
+      <ActivityTimeline organizationId={organizationId} projectId={projectId} number={number} />
     </div>
   );
 }

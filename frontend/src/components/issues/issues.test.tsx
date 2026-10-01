@@ -2,6 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { activityApi, type Activity } from "@/lib/activity-api";
 import { commentsApi, type Comment } from "@/lib/comments-api";
 import { ApiError } from "@/lib/http";
 import { issuesApi, type Issue, type IssuePage } from "@/lib/issues-api";
@@ -11,6 +12,7 @@ import { IssueDetail } from "./issue-detail";
 import { IssuesPanel } from "./issues-panel";
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
+vi.mock("@/lib/activity-api", async original => ({ ...await original<typeof import("@/lib/activity-api")>(), activityApi: { list: vi.fn() } }));
 vi.mock("@/lib/comments-api", async original => ({ ...await original<typeof import("@/lib/comments-api")>(), commentsApi: { list: vi.fn(), add: vi.fn(), edit: vi.fn(), remove: vi.fn() } }));
 vi.mock("@/lib/organizations-api", () => ({ organizationsApi: { members: vi.fn() } }));
 const url = vi.hoisted(() => ({ search: "", listeners: new Set<() => void>() }));
@@ -135,6 +137,7 @@ describe("IssueDetail", () => {
     vi.resetAllMocks();
     vi.mocked(projectsApi.get).mockResolvedValue(project);
     vi.mocked(commentsApi.list).mockResolvedValue([]);
+    vi.mocked(activityApi.list).mockResolvedValue([]);
     vi.mocked(organizationsApi.members).mockResolvedValue([{ userId: "u2", name: "Grace", email: "g@x.dev", role: "MEMBER", joinedAt: "" }]);
   });
   afterEach(cleanup);
@@ -258,5 +261,33 @@ describe("CommentThread", () => {
     wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
     expect(await screen.findByText(/Comments are closed/)).toBeTruthy();
     expect(screen.queryByLabelText("Add a comment")).toBeNull();
+  });
+});
+
+describe("ActivityTimeline", () => {
+  const entry = (over: Partial<Activity>): Activity => ({ id: "a", type: "CREATED", actor: { id: "u1", name: "Ada" }, from: null, to: null, fromPerson: null, toPerson: null, createdAt: "2026-01-01T00:00:00Z", ...over });
+  beforeEach(() => { vi.resetAllMocks(); vi.mocked(projectsApi.get).mockResolvedValue({ id: "p1", organizationId: "o1", key: "WEB", name: "Website", description: null, status: "ACTIVE", createdAt: "", updatedAt: "", archivedAt: null }); vi.mocked(commentsApi.list).mockResolvedValue([]); vi.mocked(organizationsApi.members).mockResolvedValue([]); vi.mocked(issuesApi.get).mockResolvedValue(issue()); });
+  afterEach(cleanup);
+
+  it("distinguishes status changes, assignments and comments", async () => {
+    vi.mocked(activityApi.list).mockResolvedValue([
+      entry({ id: "1" }),
+      entry({ id: "2", type: "ASSIGNED", toPerson: { id: "u2", name: "Grace" } }),
+      entry({ id: "3", type: "STATUS_CHANGED", from: "TODO", to: "IN_PROGRESS", actor: { id: "u2", name: "Grace" } }),
+      entry({ id: "4", type: "COMMENTED" }),
+    ]);
+    wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    const items = await screen.findAllByRole("listitem");
+    const text = items.map(i => i.textContent ?? "").filter(t => /Created|Assignment|Status|Comment/.test(t.slice(0, 12)));
+    expect(text.some(t => t.includes("Assignment") && t.includes("assigned this issue to Grace"))).toBe(true);
+    expect(text.some(t => t.includes("Status") && t.includes("from To do to In progress"))).toBe(true);
+    expect(text.some(t => t.includes("Comment") && t.includes("commented"))).toBe(true);
+  });
+
+  it("shows an empty state and an error with retry", async () => {
+    vi.mocked(activityApi.list).mockRejectedValueOnce(new ApiError("boom", 500)).mockResolvedValue([]);
+    wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("No activity yet.")).toBeTruthy();
   });
 });

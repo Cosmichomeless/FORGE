@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { activityKey } from "@/lib/activity-api";
 import { commentsApi, commentsKey, type Comment } from "@/lib/comments-api";
 import { ApiError } from "@/lib/http";
 
@@ -40,7 +41,7 @@ export function CommentThread({ organizationId, projectId, number, locked }: { o
   const [message, setMessage] = useState("");
   const key = commentsKey(organizationId, projectId, number);
   const comments = useQuery({ queryKey: key, queryFn: ({ signal }) => commentsApi.list(organizationId, projectId, number, signal), retry: false });
-  const refresh = () => client.invalidateQueries({ queryKey: key });
+  const refresh = async () => { await Promise.all([client.invalidateQueries({ queryKey: key }), client.invalidateQueries({ queryKey: activityKey(organizationId, projectId, number) })]); };
   const remove = useMutation({
     mutationFn: (id: string) => commentsApi.remove(organizationId, projectId, number, id),
     onSuccess: async () => { setMessage(""); await refresh(); },
