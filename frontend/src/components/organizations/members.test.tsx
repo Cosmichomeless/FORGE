@@ -18,6 +18,8 @@ vi.mock("@/lib/organizations-api", () => ({ organizationsApi: {
   invitations: vi.fn(), invite: vi.fn(), revokeInvitation: vi.fn(),
 } }));
 
+vi.mock("@/lib/projects-api", async original => ({ ...await original<typeof import("@/lib/projects-api")>(), projectsApi: { list: vi.fn().mockResolvedValue([]) } }));
+
 const me = { id: "u-1", name: "Ada", email: "ada@example.com" };
 const organization = (role: Organization["role"]): Organization => ({ id: "o-1", name: "Acme", slug: "acme", role, createdAt: "2026-10-01T10:00:00Z" });
 const member = (userId: string, name: string, role: Member["role"]): Member => ({ userId, name, email: `${name.toLowerCase()}@example.com`, role, joinedAt: "2026-10-01T10:00:00Z" });

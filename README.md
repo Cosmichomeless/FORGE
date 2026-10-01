@@ -177,6 +177,25 @@ Reglas de miembros: OWNER gestiona a todos; ADMIN solo gestiona MEMBER (puede as
 
 Invitaciones: caducan a los 7 días (APP_INVITATION_TTL, p. ej. 3d o 12h) y solo se guarda el hash SHA-256 del token. **El token se muestra una única vez al crearla** como enlace /invitations/accept#token=… (el fragmento no viaja al servidor). Debe aceptarla un usuario autenticado cuyo email coincide con el invitado; caducadas, usadas o de otro email se rechazan (410, 409, 403). **Limitaciones actuales:** no se envían correos, el creador comparte el enlace manualmente, y si el invitado no tiene sesión el redireccionamiento al login pierde el fragmento (puede pegar el token en /invitations/accept).
 
+## Proyectos e incidencias
+
+Cada organización agrupa sus trabajos en proyectos (`/api/v1/organizations/{organizationId}/projects`):
+
+| Método | Ruta | Rol |
+| --- | --- | --- |
+| `POST` | `/` | OWNER / ADMIN |
+| `GET` | `/?status=ACTIVE\|ARCHIVED\|ALL` (por defecto `ACTIVE`) | cualquier miembro |
+| `GET` | `/{projectId}` | cualquier miembro |
+| `PUT` | `/{projectId}` (nombre y descripción) | OWNER / ADMIN |
+| `POST` | `/{projectId}/archive` y `/restore` (idempotentes) | OWNER / ADMIN |
+
+- La **clave** (2–10 caracteres, mayúsculas y dígitos, empieza por letra) es única por organización, inmutable y se normaliza a mayúsculas. Sigue reservada tras archivar.
+- Los proyectos archivados siguen siendo legibles por los miembros, no aparecen en el listado por defecto y no se pueden editar (409).
+- Un proyecto de otra organización o un no miembro recibe 404; un rol insuficiente, 403.
+- Las **incidencias** se numeran por proyecto (`KEY-1`, `KEY-2`…) con un contador `projects.last_issue_number` que se incrementa bajo bloqueo pesimista de la fila del proyecto, en la misma transacción que el alta. No hay huecos si la transacción falla y nunca se usa `MAX()+1`.
+- Estado: `IssueService` es la base para el CRUD de incidencias; todavía no expone endpoint HTTP.
+- En la interfaz, el panel de proyectos está en el detalle de la organización y cada proyecto tiene su página en `/organizations/{id}/projects/{projectId}`.
+
 ## Roadmap y contribuciones
 
 Las issues de GitHub son la fuente de seguimiento. La siguiente etapa añade proyectos, tickets, colaboración y más pruebas. Docker del stack completo, CI y despliegue en Azure siguen pendientes. No se promete ninguna extensión (Redis/WebSockets) en esta base.
