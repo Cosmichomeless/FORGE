@@ -1,0 +1,15 @@
+# Simulates the managed HTTPS ingress of Azure Container Apps with a local CA.
+{
+	local_certs
+	auto_https disable_redirects
+}
+
+app.forge.localhost:8443 {
+	tls internal
+	reverse_proxy frontend:3000
+}
+
+api.forge.localhost:8443 {
+	tls internal
+	reverse_proxy backend:8080
+}

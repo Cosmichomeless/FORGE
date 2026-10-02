@@ -1,6 +1,11 @@
 # FORGE en Azure: arquitectura, configuración y operación
 
-> **Estado: propuesta documentada, NO desplegada.** No hay suscripción Azure ni CLI
+> **Estado: propuesta documentada, NO desplegada en Azure; ensayada en local.**
+> La carpeta [`deploy/`](../deploy) reproduce la topología de producción con Docker
+> (ingress HTTPS, cookies `Secure`, secretos por entorno, rol de BD sin privilegios,
+> backup/restore y smoke test). Ver [Ensayo local](#ensayo-local-de-producción).
+>
+> **Detalle del alcance:** No hay suscripción Azure ni CLI
 > configurada en el entorno de desarrollo, por lo que nada de lo descrito aquí se ha
 > ejecutado contra Azure. Lo verificable en local (imágenes, Compose, migraciones,
 > copia y restauración con `pg_dump`/`pg_restore`) sí se ha probado y se indica.
@@ -123,3 +128,33 @@ Lista de comprobaciones tras cada despliegue:
    automatizado equivalente está en `frontend/e2e/journey.spec.ts`).
 4. `flyway_schema_history` sin migraciones fallidas.
 5. Sin errores 5xx nuevos en Log Analytics durante los primeros minutos.
+
+## Ensayo local de producción
+
+`deploy/` simula, sin Azure, lo que se puede comprobar de #64–#67:
+
+| Elemento real (Azure) | Simulación local |
+| --- | --- |
+| Ingress HTTPS gestionado | Caddy con CA interna: `https://app.forge.localhost:8443` y `https://api.forge.localhost:8443` |
+| Secretos de Container Apps | `deploy/.env` generado con `openssl rand` (ignorado por Git) |
+| Usuario administrador vs. de aplicación | `forge_admin` (solo operación) y `forge_app` (sin superusuario, dueño del esquema para Flyway) |
+| Red privada hacia PostgreSQL | red Docker `internal`; la BD no publica ningún puerto en el host |
+| Revisión anterior / reversión | backup automático previo (`backup.sh`) y `restore.sh` a una BD nueva |
+
+```bash
+./deploy/deploy.sh      # genera secretos, copia previa, build, up --wait y smoke test
+./deploy/smoke.sh       # 11 comprobaciones posteriores al despliegue
+E2E_BASE_URL=https://app.forge.localhost:8443 npm --prefix frontend run e2e
+```
+
+Resultado del ensayo (2 de octubre de 2026): las 11 comprobaciones pasan; el recorrido
+E2E completo pasa sobre HTTPS con cookie `Secure`+`HttpOnly`; `pg_dump`/`pg_restore`
+conservan 5 usuarios, 13 incidencias y 2 comentarios.
+
+Hallazgos que el ensayo hizo cambiar en el código: Spring generaba un usuario en
+memoria con contraseña aleatoria (no usado, pero ruidoso en logs y superficie
+innecesaria) y se excluyó su autoconfiguración; el smoke test necesita esperar al proxy.
+
+**Qué NO demuestra**: DNS y certificados reales, Key Vault, Log Analytics, redes
+privadas de Azure, escala a 0 ni costes reales. `*.localhost` comparte sitio, por lo que
+no ejercita el caso `SameSite=None` de los dominios `azurecontainerapps.io`.

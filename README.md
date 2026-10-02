@@ -13,6 +13,16 @@
 
 FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Incluye registro e inicio de sesión con Spring Security (sesión HttpOnly + CSRF), organizaciones multiusuario con roles (OWNER, ADMIN, MEMBER) e invitaciones con caducidad, proyectos, incidencias numeradas por proyecto (`KEY-N`) con estado, prioridad y asignación, comentarios, historial de actividad, búsqueda y panel personal. **No hay demo pública ni release de producción: el despliegue en Azure está solo documentado (ver [docs/azure.md](docs/azure.md)), no ejecutado.**
 
+## Capturas
+
+| Inicio de sesión | Organización |
+| --- | --- |
+| ![Login](docs/screenshots/01-login.png) | ![Organización](docs/screenshots/02-organization.png) |
+| **Incidencias de un proyecto** | **Detalle de incidencia** |
+| ![Incidencias](docs/screenshots/03-project-issues.png) | ![Detalle](docs/screenshots/04-issue-detail.png) |
+
+Se regeneran con `SCREENSHOTS=1 E2E_BASE_URL=<url> npx playwright test screenshots` (desde `frontend/`).
+
 ## Arquitectura
 
 
@@ -139,6 +149,7 @@ FORGE/
 ├── frontend/      # Next.js App Router, componentes y tests
 ├── .github/       # Plantillas de issues/PR y workflows de CI
 ├── docs/          # Arquitectura y operación en Azure
+├── deploy/        # Ensayo de producción: HTTPS, secretos, backup, smoke test
 ├── scripts/       # e2e.sh
 ├── compose.yaml   # PostgreSQL, API y frontend
 └── CONTRIBUTING.md
@@ -222,7 +233,9 @@ Cada organización agrupa sus trabajos en proyectos (`/api/v1/organizations/{org
 
 ## Despliegue
 
-Arquitectura Azure propuesta (Container Apps + PostgreSQL Flexible Server), configuración de producción, copia/restauración y checks posteriores: [docs/azure.md](docs/azure.md). **Pendiente de ejecutar**; no hay demo pública ni capturas publicadas todavía.
+- **Ensayo de producción en local** (`./deploy/deploy.sh`): ingress HTTPS, cookies `Secure`, secretos generados, rol de BD sin privilegios, BD sin puertos expuestos, copia/restauración y 11 comprobaciones de humo. El E2E completo pasa sobre ese entorno.
+- **Azure**: arquitectura propuesta (Container Apps + PostgreSQL Flexible Server), configuración y checks en [docs/azure.md](docs/azure.md). **No desplegado**: no hay demo pública ni URL.
+- Ficha de portfolio: [docs/portfolio.md](docs/portfolio.md).
 
 ## Roadmap y contribuciones
 
