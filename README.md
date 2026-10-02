@@ -4,14 +4,14 @@
 
 **Un espacio de gestión de proyectos, construido paso a paso.**
 
-![Estado](https://img.shields.io/badge/estado-organizaciones-blue)
+![Estado](https://img.shields.io/badge/estado-MVP%20local-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>
 
-FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Actualmente incluye registro e inicio de sesión con Spring Security, organizaciones multiusuario con roles (OWNER, ADMIN, MEMBER) e invitaciones con caducidad, PostgreSQL local y migraciones. **Todavía no implementa proyectos ni tickets; no hay demo pública ni release de producción.**
+FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Incluye registro e inicio de sesión con Spring Security (sesión HttpOnly + CSRF), organizaciones multiusuario con roles (OWNER, ADMIN, MEMBER) e invitaciones con caducidad, proyectos, incidencias numeradas por proyecto (`KEY-N`) con estado, prioridad y asignación, comentarios, historial de actividad, búsqueda y panel personal. **No hay demo pública ni release de producción: el despliegue en Azure está solo documentado (ver [docs/azure.md](docs/azure.md)), no ejecutado.**
 
 ## Arquitectura
 
@@ -86,7 +86,7 @@ npm ci
 npm run dev
 ```
 
-Abre http://localhost:3000. Desde la página inicial puedes ir a /register y /login. Tras iniciar sesión accedes a /dashboard. Desde /organizations creas una organización y cambias de organización activa con el selector de la barra superior; en /organizations/{id} gestionas ajustes, miembros e invitaciones según tu rol. Aún no hay proyectos.
+Abre http://localhost:3000. Desde la página inicial puedes ir a /register y /login. Tras iniciar sesión accedes a /dashboard. Desde /organizations creas una organización y cambias de organización activa con el selector de la barra superior; en /organizations/{id} gestionas ajustes, miembros e invitaciones según tu rol. 
 
 ## Verificación
 
@@ -104,6 +104,17 @@ docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SEL
 ```
 
 V1 debe figurar una sola vez con success=true. No modifiques migraciones ya aplicadas: añade una nueva migración versionada.
+
+### Alternativa: todo el stack con Docker Compose
+
+Con `.env` de la raíz rellenado (`DB_USER`, `DB_PASSWORD` son obligatorios), `docker compose up -d --build --wait` construye y levanta PostgreSQL, API y frontend; cada servicio espera a que el anterior esté *healthy*. La API queda en http://127.0.0.1:8080 y la interfaz en http://127.0.0.1:3000 (puertos configurables con `BACKEND_PORT` / `FRONTEND_PORT`). `NEXT_PUBLIC_API_URL` se incrusta al construir la imagen del frontend, así que cambiarla exige `--build`.
+
+## Pruebas
+
+- Backend: 102 tests (`mvn clean verify`), incluidas pruebas contra PostgreSQL real con Testcontainers (se omiten si no hay Docker) y la matriz de roles.
+- Frontend: Vitest (`npm run test`).
+- E2E: `./scripts/e2e.sh` levanta un PostgreSQL temporal, la API y el frontend, y ejecuta con Playwright el recorrido registro → organización → proyecto → incidencia → asignación → comentario → cambio de estado, con análisis de accesibilidad axe (solo de las pantallas recorridas, no de toda la app).
+- CI: GitHub Actions ejecuta lint/typecheck/test/build del frontend y `mvn clean verify` del backend en cada PR (los E2E no se ejecutan en CI).
 
 ## Parar los servicios
 
@@ -126,8 +137,10 @@ Detén frontend y backend con Ctrl+C en sus terminales. Desde la raíz, ejecuta 
 FORGE/
 ├── backend/       # Spring Boot, tests y migraciones Flyway
 ├── frontend/      # Next.js App Router, componentes y tests
-├── .github/       # Plantillas de issues y PR
-├── compose.yaml   # PostgreSQL local
+├── .github/       # Plantillas de issues/PR y workflows de CI
+├── docs/          # Arquitectura y operación en Azure
+├── scripts/       # e2e.sh
+├── compose.yaml   # PostgreSQL, API y frontend
 └── CONTRIBUTING.md
 ```
 
@@ -193,14 +206,29 @@ Cada organización agrupa sus trabajos en proyectos (`/api/v1/organizations/{org
 - Los proyectos archivados siguen siendo legibles por los miembros, no aparecen en el listado por defecto y no se pueden editar (409).
 - Un proyecto de otra organización o un no miembro recibe 404; un rol insuficiente, 403.
 - Las **incidencias** se numeran por proyecto (`KEY-1`, `KEY-2`…) con un contador `projects.last_issue_number` que se incrementa bajo bloqueo pesimista de la fila del proyecto, en la misma transacción que el alta. No hay huecos si la transacción falla y nunca se usa `MAX()+1`.
-- Estado: `IssueService` es la base para el CRUD de incidencias; todavía no expone endpoint HTTP.
+- Las incidencias se gestionan en `/api/v1/organizations/{organizationId}/projects/{projectId}/issues` (alta, listado con filtros, detalle por número, edición, y `PUT` de `assignee`, `status` y `priority`), con comentarios e historial de actividad. La búsqueda por organización está en `/organizations/{id}/issues` y el panel personal en `/me/dashboard`.
+- **Estados**: los definidos por el modelo (incluye `DONE`). **Prioridades**: `LOW`, `MEDIUM`, `HIGH`, `URGENT` (elección de diseño de este proyecto, no un estándar).
 - En la interfaz, el panel de proyectos está en el detalle de la organización y cada proyecto tiene su página en `/organizations/{id}/projects/{projectId}`.
+
+## Decisiones y limitaciones
+
+- **Numeración sin huecos**: contador por proyecto bajo bloqueo pesimista en lugar de `MAX()+1`; coste: serializa altas concurrentes en un mismo proyecto (probado con 12 altas en 6 hilos).
+- **Sesión HttpOnly + CSRF** en vez de JWT en el navegador: evita exponer tokens a JavaScript; exige configurar bien origen, cookies y `SameSite` entre dominios ([docs/azure.md](docs/azure.md)).
+- **Flyway como única vía de esquema**; Hibernate solo valida.
+- La búsqueda usa `LIKE` (sin índice de texto completo): suficiente para el volumen de demostración.
+- Eliminar a un miembro de una organización no limpia sus asignaciones existentes.
+- Los análisis axe cubren las pantallas del recorrido E2E, no toda la interfaz.
+- La URL de la API del frontend es fija en tiempo de build.
+
+## Despliegue
+
+Arquitectura Azure propuesta (Container Apps + PostgreSQL Flexible Server), configuración de producción, copia/restauración y checks posteriores: [docs/azure.md](docs/azure.md). **Pendiente de ejecutar**; no hay demo pública ni capturas publicadas todavía.
 
 ## Roadmap y contribuciones
 
-Las issues de GitHub son la fuente de seguimiento. La siguiente etapa añade proyectos, tickets, colaboración y más pruebas. Docker del stack completo, CI y despliegue en Azure siguen pendientes. No se promete ninguna extensión (Redis/WebSockets) en esta base.
+Las issues de GitHub son la fuente de seguimiento. No se promete ninguna extensión (Redis/WebSockets) en esta base.
 
-Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para ramas cortas, Conventional Commits, comprobaciones y Definition of Done. Las plantillas de issues y PR están en .github/. Todavía no hay checks de CI configurados: ejecuta las comprobaciones manuales antes de solicitar revisión.
+Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para ramas cortas, Conventional Commits, comprobaciones y Definition of Done. Las plantillas de issues y PR están en .github/. Los checks de CI se ejecutan en cada PR; ejecútalos también en local antes de solicitar revisión.
 
 ## Licencia
 
