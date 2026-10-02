@@ -6,7 +6,8 @@ type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & { label: str
 /** Labelled input that wires the error message to the control for assistive technology. */
 export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
   ({ label, error, id, className, ...props }, ref) => {
-    const inputId = id ?? props.name;
+    const generatedId = React.useId();
+    const inputId = id ?? generatedId;  // unique per instance: two forms on one page may both have a "name" field
     return (
       <div className="space-y-1">
         <label htmlFor={inputId} className="block text-sm font-medium">{label}</label>
