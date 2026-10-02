@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 // Core MVP journey: register → organization → project → issue → assignment → comment → status.
@@ -45,10 +46,26 @@ test("a new user can run the whole core journey", async ({ page }) => {
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(page.getByText("First comment from the e2e run")).toBeVisible();
 
+  const scan = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(scan.violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(" ")).join(", ")}`)).toEqual([]);
+
   await page.getByLabel("Status").selectOption({ label: "Done" });
   await expect(page.getByLabel("Status")).toHaveValue("DONE");
 
   await page.reload();
   await expect(page.getByLabel("Status")).toHaveValue("DONE");
   await expect(page.getByText("First comment from the e2e run")).toBeVisible();
+});
+
+test("the login form works with the keyboard only", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").focus();
+  await page.keyboard.type("nobody@example.com");
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("wrong-password-123");
+  await page.keyboard.press("Enter");
+  const alert = page.getByRole("alert").filter({ hasText: /\S/ });
+  await expect(alert.first()).toBeVisible();
+  const scan = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(scan.violations.map(v => v.id)).toEqual([]);
 });
