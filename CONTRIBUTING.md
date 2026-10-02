@@ -17,7 +17,15 @@ No publiques credenciales, archivos .env ni datos personales en commits o issues
 Desde frontend/: `npm run lint && npm run typecheck && npm run test && npm run build`.
 Desde backend/, con JAVA_HOME apuntando a JDK 25: `mvn clean verify`.
 Para cambios de infraestructura: `docker compose config --quiet` después de configurar .env.
-Todavía no hay workflows de CI ni protección de rama configurados; estos checks son manuales hasta las issues #60–62.
+Los mismos checks se ejecutan en GitHub Actions en cada PR (`.github/workflows/frontend.yml` y `backend.yml`, filtrados por ruta). Un fallo marca la comprobación como fallida.
+
+## De rama a merge
+
+1. Rama corta desde `main` con prefijo `feat/`, `fix/`, `docs/` o `chore/`.
+2. Commits con Conventional Commits; referencia la issue en el cuerpo o la PR (`Closes #N`).
+3. Abre una PR pequeña con la plantilla y espera los checks: **Frontend / lint, typecheck, test, build** y **Backend / compile, test, package**.
+4. Fusiona solo con los checks en verde y los criterios de la issue cumplidos.
+5. Recomendado: en *Settings → Branches* protege `main` exigiendo esos dos checks y una PR antes de fusionar (es un ajuste del repositorio, no vive en el código).
 
 ## Definition of Done
 
