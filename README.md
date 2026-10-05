@@ -11,7 +11,17 @@
 
 </div>
 
-FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Incluye registro e inicio de sesión con Spring Security (sesión HttpOnly + CSRF), organizaciones multiusuario con roles (OWNER, ADMIN, MEMBER) e invitaciones con caducidad, proyectos, incidencias numeradas por proyecto (`KEY-N`) con estado, prioridad y asignación, comentarios, historial de actividad, búsqueda y panel personal. **No hay demo pública ni release de producción: el despliegue en Azure está solo documentado (ver [docs/azure.md](docs/azure.md)), no ejecutado.**
+FORGE es un proyecto full stack de portfolio inspirado en Linear/Jira. Incluye registro e inicio de sesión con Spring Security (sesión HttpOnly + CSRF), organizaciones multiusuario con roles (OWNER, ADMIN, MEMBER) e invitaciones con caducidad, proyectos, incidencias numeradas por proyecto (`KEY-N`) con estado, prioridad y asignación, comentarios, historial de actividad, búsqueda y panel personal.
+
+## Demo
+
+> **Estado:** la demo pública todavía no está desplegada. Mientras tanto, puedes ver la aplicación funcionando en tu máquina con un solo comando y revisar las capturas de abajo.
+
+```bash
+./deploy/deploy.sh   # levanta HTTPS + frontend + API + BD y ejecuta las comprobaciones
+```
+
+Después abre `https://app.forge.localhost:8443`, crea una cuenta y recorre el flujo: organización, proyecto, incidencia, asignación, comentarios y cambio de estado. Requiere Docker con Compose v2; el despliegue en la nube está documentado en [docs/azure.md](docs/azure.md) pero no ejecutado.
 
 ## Capturas
 

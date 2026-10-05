@@ -54,6 +54,35 @@ distinto y no reutiliza las imágenes ya construidas.
 Límites: escala a 0 implica arranque en frío de varios segundos (Spring Boot); B1ms es
 pequeño y adecuado solo para carga de demostración. Fija un presupuesto y alerta de coste.
 
+### Reducir o evitar el coste
+
+- Una cuenta nueva de Azure suele incluir crédito de bienvenida y un tramo gratuito
+  temporal (incluye PostgreSQL Flexible B1ms); las condiciones cambian, comprobarlas en la
+  web de Azure antes de contar con ellas.
+- Borrar el grupo de recursos cuando no se use limita el gasto a céntimos, pero la demo
+  deja de estar disponible.
+- Crear un presupuesto con alerta (por ejemplo 10 €) antes de provisionar nada.
+
+## Estado de la decisión de despliegue (5 de octubre de 2026)
+
+El despliegue real **sigue pendiente** y las issues #64–#69 permanecen abiertas a
+propósito: ningún criterio que dependa de un entorno real se da por cumplido. Solo está
+verificado el [ensayo local](#ensayo-local-de-producción).
+
+Alternativa gratuita valorada (no ejecutada, planes a verificar en cada proveedor):
+
+| Pieza | Opción | Notas |
+| --- | --- | --- |
+| Frontend | Vercel Hobby | Gratis para uso personal |
+| API (Docker) | Render, plan Free | Se duerme sin tráfico (primer acceso lento); 512 MB de RAM, hay que limitar la JVM |
+| PostgreSQL | Neon, plan Free | Permanente; la BD gratuita de Render caduca |
+
+Railway y Fly.io no se consideran: no ofrecen un plan gratuito permanente. Con frontend y
+API en dominios distintos, la cookie de sesión pasa a ser de terceros y algunos
+navegadores (Safari) la bloquean; habría que servir `/api/*` desde el dominio del frontend
+mediante un `rewrite` de Next.js. Si se elige esta vía, #64–#67 deberán reformularse para
+nombrar el proveedor real en lugar de Azure.
+
 ## Configuración de producción (#64)
 
 Nada de esto vive en Git; se inyecta como variable o secreto de cada Container App.
