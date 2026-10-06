@@ -43,22 +43,22 @@ export function readFilters(params: URLSearchParams): { q: string; status: Issue
 function SearchBox({ initial, onSearch }: { initial: string; onSearch: (q: string) => void }) {
   const [draft, setDraft] = useState(initial);
   return (
-    <form role="search" aria-label="Search issues" className="flex gap-2" onSubmit={event => { event.preventDefault(); onSearch(draft.trim()); }}>
-      <span className="relative inline-flex items-center">
+    <form role="search" aria-label="Search issues" className="col-span-2 flex gap-2 sm:col-auto" onSubmit={event => { event.preventDefault(); onSearch(draft.trim()); }}>
+      <span className="relative inline-flex min-w-0 flex-1 items-center sm:flex-none">
         <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 size-4 text-muted-foreground" />
         <input type="search" aria-label="Search" placeholder="Key or title" value={draft} onChange={event => setDraft(event.target.value)}
-          className={cn(controlClass, "h-9 w-52 pl-8 sm:w-60")} />
+          className={cn(controlClass, "h-9 w-full pl-8 sm:w-60")} />
       </span>
       <Button type="submit" size="sm" variant="outline" className="h-9">Search</Button>
     </form>
   );
 }
 
-function Filter({ id, label, value, onChange, children }: { id: string; label: string; value: string; onChange: (value: string) => void; children: React.ReactNode }) {
+function Filter({ id, label, value, onChange, className, children }: { id: string; label: string; value: string; onChange: (value: string) => void; className?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn("flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2", className)}>
       <label htmlFor={id} className="text-[0.8125rem] font-medium text-muted-foreground">{label}</label>
-      <Select id={id} wrapperClassName="w-auto" className="w-36" value={value} onChange={event => onChange(event.target.value)}>{children}</Select>
+      <Select id={id} wrapperClassName="w-full sm:w-auto" className="w-full sm:w-36" value={value} onChange={event => onChange(event.target.value)}>{children}</Select>
     </div>
   );
 }
@@ -97,7 +97,7 @@ export function IssuesPanel({ organizationId, projectId, archived }: { organizat
         </CardHeader>
         {creating && <div className="border-b border-border bg-muted/40 p-4 sm:p-5"><CreateIssueForm organizationId={organizationId} projectId={projectId} onCancel={() => setCreating(false)}
           onCreated={() => { setCreating(false); update({ page: null }); }} /></div>}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3 sm:px-5">
+        <div className="grid grid-cols-2 gap-3 border-b border-border px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2 sm:px-5">
           <SearchBox key={filters.q} initial={filters.q} onSearch={q => setFilter("q", q)} />
           <Filter id="filter-status" label="Status" value={filters.status} onChange={value => setFilter("status", value)}>
             <option value="">All</option>
@@ -107,7 +107,7 @@ export function IssuesPanel({ organizationId, projectId, archived }: { organizat
             <option value="">All</option>
             {issuePriorities.map(value => <option key={value} value={value}>{priorityLabel[value]}</option>)}
           </Filter>
-          <Filter id="filter-assignee" label="Assignee" value={filters.assignee} onChange={value => setFilter("assignee", value)}>
+          <Filter id="filter-assignee" label="Assignee" className="col-span-2 sm:col-auto" value={filters.assignee} onChange={value => setFilter("assignee", value)}>
             <option value="">Anyone</option>
             <option value="none">Unassigned</option>
             {members.data?.map(member => <option key={member.userId} value={member.userId}>{member.name}</option>)}
@@ -141,7 +141,7 @@ export function IssuesPanel({ organizationId, projectId, archived }: { organizat
             ))}
           </RowList>
           <nav aria-label="Issues pagination" className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-[0.8125rem] text-muted-foreground sm:px-5">
-            <span>Page {data.page + 1} of {Math.max(data.totalPages, 1)} · {data.totalItems} issues</span>
+            <span>Page {data.page + 1} of {Math.max(data.totalPages, 1)} · {data.totalItems} {data.totalItems === 1 ? "issue" : "issues"}</span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={data.page === 0} onClick={() => setPage(data.page - 1)}>Previous</Button>
               <Button variant="outline" size="sm" disabled={data.page + 1 >= data.totalPages} onClick={() => setPage(data.page + 1)}>Next</Button>
