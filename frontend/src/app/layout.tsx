@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AppNav } from "@/components/app-nav";
+import { AppShell } from "@/components/layout/app-shell";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -13,8 +13,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="es">
       <body>
         <Providers>
-          <AppNav />
-          {children}
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
