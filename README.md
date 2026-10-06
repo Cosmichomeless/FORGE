@@ -11,7 +11,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Flyway-336791)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
-[Demo local](#probarlo-en-un-comando) · [Capturas](#capturas) · [Arquitectura](#arquitectura) · [Decisiones](#decisiones-de-diseño) · [Documentación](#documentación)
+[Demo en vivo](https://forge-sandy-eta.vercel.app) · [Demo local](#probarlo-en-un-comando) · [Capturas](#capturas) · [Arquitectura](#arquitectura) · [Decisiones](#decisiones-de-diseño) · [Documentación](#documentación)
 
 </div>
 
@@ -28,7 +28,7 @@ FORGE es un gestor de proyectos multiusuario inspirado en Linear y Jira, constru
 
 ## Probarlo en un comando
 
-> La demo pública todavía no está desplegada. Está preparado el despliegue gratuito (Vercel + Render + Neon, ver [docs/deploy-free.md](docs/deploy-free.md)). Mientras tanto, el entorno de producción se ensaya en local, con HTTPS incluido.
+> **Demo en vivo: https://forge-sandy-eta.vercel.app** (Vercel + Render + Neon, planes gratuitos; ver [docs/deploy-free.md](docs/deploy-free.md)). La API se duerme tras ~15 min sin tráfico: la primera visita puede tardar 30–60 s.
 
 ```bash
 ./deploy/deploy.sh   # HTTPS + frontend + API + base de datos, y comprobaciones de humo
@@ -121,7 +121,7 @@ FORGE/
 ## Despliegue
 
 - **Ensayo de producción en local** (`./deploy/deploy.sh`): ingress HTTPS, cookies `Secure`, secretos generados, rol de BD sin privilegios, BD sin puertos expuestos, copia y restauración, y 11 comprobaciones de humo.
-- **Demo gratuita (Vercel + Render + Neon)**: preparada con `render.yaml` y un proxy `/api/*` en `frontend/next.config.ts`; pasos en [docs/deploy-free.md](docs/deploy-free.md). **No desplegada**: no hay demo pública ni URL.
+- **Demo gratuita (Vercel + Render + Neon)**: desplegada en https://forge-sandy-eta.vercel.app con `render.yaml` y un proxy `/api/*` en `frontend/next.config.ts`; pasos y límites en [docs/deploy-free.md](docs/deploy-free.md).
 - **Azure** (Container Apps + PostgreSQL Flexible Server): arquitectura y configuración documentadas en [docs/azure.md](docs/azure.md). **No está desplegado**: no hay demo pública ni URL.
 
 ## Licencia

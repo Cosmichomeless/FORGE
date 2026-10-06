@@ -1,9 +1,8 @@
 # Despliegue gratuito: Vercel + Render + Neon
 
-> **Estado: preparado, NO desplegado.** La configuración está en el repositorio
-> (`render.yaml`, `frontend/next.config.ts`) y el mecanismo de proxy se ha verificado en local, pero
-> no se ha creado ninguna cuenta ni servicio. Los planes gratuitos cambian: confirma sus
-> condiciones antes de empezar.
+> **Estado: desplegado y verificado el 7 de octubre de 2026** en
+> https://forge-sandy-eta.vercel.app (API en `https://forge-api-plsr.onrender.com`). Los planes
+> gratuitos cambian: confirma sus condiciones antes de repetir el proceso.
 
 ## Arquitectura
 
@@ -53,11 +52,18 @@ Esto evita configurar `SameSite=None`.
 
 ## Qué se ha verificado y qué no
 
-- **Verificado en local**: con el frontend en modo producción (`BACKEND_URL` apuntando al
-  API), registro, login y sesión (`/me`) funcionan a través del proxy `/api/*`. El Origin
-  debe coincidir con `APP_FRONTEND_ORIGIN`.
-- **No verificado**: Vercel, Render y Neon reales; certificados, tiempos de arranque y
-  que `Set-Cookie` con `Secure` atraviese el proxy de Vercel igual que en local.
+Verificado el 7 de octubre de 2026 contra los servicios reales:
+
+- `GET /actuator/health` de la API en Render devuelve `{"status":"UP"}`; Flyway aplicó las migraciones sobre Neon.
+- `GET /api/v1/auth/csrf` a través de Vercel responde 200 con `Set-Cookie: JSESSIONID; Secure; HttpOnly; SameSite=Lax`.
+- Registro (201), login (200) y `/me` (200 con sesión, 401 sin ella) a través del proxy de Vercel.
+- El recorrido E2E `frontend/e2e/journey.spec.ts` (2 pruebas) pasa contra la URL pública:
+  `E2E_BASE_URL=https://forge-sandy-eta.vercel.app npx playwright test e2e/journey.spec.ts`.
+
+No verificado: carga, copias de seguridad, alertas ni comportamiento tras semanas de suspensiones de Neon.
+
+Nota: tras cambiar variables en Vercel hay que redesplegar y la CDN puede servir un 404 cacheado
+unos minutos; con la propia respuesta de `x-vercel-cache: HIT` se reconoce.
 
 ## Limitaciones del plan gratuito
 
