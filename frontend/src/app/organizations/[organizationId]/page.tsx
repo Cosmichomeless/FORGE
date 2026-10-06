@@ -3,5 +3,5 @@ import { OrganizationDetail } from "@/components/organizations/organization-deta
 
 export default async function OrganizationPage({ params }: { params: Promise<{ organizationId: string }> }) {
   const { organizationId } = await params;
-  return <main className="mx-auto max-w-4xl px-6 py-12"><PrivateShell><OrganizationDetail organizationId={organizationId} /></PrivateShell></main>;
+  return <PrivateShell><OrganizationDetail organizationId={organizationId} /></PrivateShell>;
 }

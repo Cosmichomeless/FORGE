@@ -5,7 +5,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { Mail, UserPlus } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardDescription, CardHeader, CardTitle, Row, RowList } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Select, controlClass } from "@/components/ui/input";
+import { ListSkeleton, LoadingState } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { TextField } from "@/components/ui/text-field";
 import { ApiError } from "@/lib/http";
 import { organizationsApi, type CreatedInvitation, type Organization } from "@/lib/organizations-api";
@@ -47,45 +54,52 @@ export function InvitationsPanel({ organization }: { organization: Organization 
     onError: error => { setMessage(describe(error)); void client.invalidateQueries({ queryKey: key }); },
   });
   return (
-    <section aria-labelledby="invitations-heading" className="space-y-4">
-      <h2 id="invitations-heading" className="text-xl font-semibold">Invitations</h2>
-      <form noValidate aria-busy={invite.isPending} className="max-w-sm space-y-4"
-        onSubmit={event => { void handleSubmit(values => { if (!invite.isPending) invite.mutate(values); })(event); }}>
-        <TextField label="Email to invite" type="email" autoComplete="off" error={errors.email?.message} {...register("email")} />
-        <div className="space-y-1">
-          <label htmlFor="invite-role" className="block text-sm font-medium">Role</label>
-          <select id="invite-role" {...register("role")} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
-            <option value="MEMBER">MEMBER</option><option value="ADMIN">ADMIN</option>
-          </select>
-          {errors.role && <p role="alert" className="text-sm text-red-600">{errors.role.message}</p>}
-        </div>
-        {errors.root && <p role="alert" className="text-sm text-red-600">{errors.root.message}</p>}
-        <Button type="submit" disabled={invite.isPending}>{invite.isPending ? "Sending…" : "Create invitation"}</Button>
-      </form>
-      {created && <div role="status" className="space-y-2 rounded-md border p-3 text-sm">
-        <p>Invitation created for {created.email}. Share this link now; it is shown only once and expires {new Date(created.expiresAt).toLocaleString()}.</p>
-        <input readOnly aria-label="Invitation link" value={acceptanceLink(created.token)} onFocus={event => event.currentTarget.select()}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 font-mono text-xs" />
-      </div>}
-      {message && <p role="alert" className="text-sm text-red-600">{message}</p>}
-      {pending.isPending && <p role="status">Loading invitations…</p>}
-      {pending.isError && <div className="space-y-2"><p role="alert">Unable to load invitations.</p><Button onClick={() => { void pending.refetch(); }}>Retry</Button></div>}
-      {pending.data && (pending.data.length === 0
-        ? <p className="text-sm text-neutral-600">No pending invitations.</p>
-        : <ul className="divide-y rounded-md border">
-          {pending.data.map(invitation => (
-            <li key={invitation.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
-              <div>
-                <p className="font-medium">{invitation.email}</p>
-                <p className="text-sm text-neutral-600">{invitation.role} · expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
-              </div>
-              <Button variant="outline" size="sm" disabled={revoke.isPending} onClick={() => revoke.mutate(invitation.id)}
-                aria-label={`Revoke invitation for ${invitation.email}`}>
-                Revoke
-              </Button>
-            </li>
-          ))}
-        </ul>)}
+    <section aria-labelledby="invitations-heading">
+      <Card>
+        <CardHeader>
+          <CardTitle id="invitations-heading">Invitations</CardTitle>
+          <CardDescription>Invite teammates with a one-time link.</CardDescription>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          <form noValidate aria-busy={invite.isPending} className="space-y-4"
+            onSubmit={event => { void handleSubmit(values => { if (!invite.isPending) invite.mutate(values); })(event); }}>
+            <TextField label="Email to invite" type="email" autoComplete="off" placeholder="name@company.com" error={errors.email?.message} {...register("email")} />
+            <div className="space-y-1.5">
+              <label htmlFor="invite-role" className="block text-[0.8125rem] font-medium">Role</label>
+              <Select id="invite-role" {...register("role")}>
+                <option value="MEMBER">MEMBER</option><option value="ADMIN">ADMIN</option>
+              </Select>
+              {errors.role && <p role="alert" className="text-[0.8125rem] text-danger-soft-foreground">{errors.role.message}</p>}
+            </div>
+            {errors.root && <Alert tone="error" role="alert">{errors.root.message}</Alert>}
+            <Button type="submit" disabled={invite.isPending}><UserPlus aria-hidden="true" />{invite.isPending ? "Sending…" : "Create invitation"}</Button>
+          </form>
+          {created && <Alert tone="success" role="status">
+            <p>Invitation created for {created.email}. Share this link now; it is shown only once and expires {new Date(created.expiresAt).toLocaleString()}.</p>
+            <input readOnly aria-label="Invitation link" value={acceptanceLink(created.token)} onFocus={event => event.currentTarget.select()}
+              className={cn(controlClass, "mt-2 h-9 font-mono text-xs")} />
+          </Alert>}
+          {message && <Alert tone="error" role="alert">{message}</Alert>}
+        </CardBody>
+        {pending.isPending && <div className="border-t border-border"><LoadingState label="Loading invitations…"><ListSkeleton rows={2} /></LoadingState></div>}
+        {pending.isError && <div className="border-t border-border p-4 sm:p-5"><Alert tone="error" role="alert" action={<Button size="sm" onClick={() => { void pending.refetch(); }}>Retry</Button>}>Unable to load invitations.</Alert></div>}
+        {pending.data && (pending.data.length === 0
+          ? <div className="border-t border-border"><EmptyState icon={<Mail />} title="No pending invitations." className="py-8" /></div>
+          : <RowList className="border-t border-border">
+            {pending.data.map(invitation => (
+              <Row key={invitation.id} className="justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{invitation.email}</p>
+                  <p className="text-xs text-muted-foreground">{invitation.role} · expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
+                </div>
+                <Button variant="outline" size="sm" disabled={revoke.isPending} onClick={() => revoke.mutate(invitation.id)}
+                  aria-label={`Revoke invitation for ${invitation.email}`}>
+                  Revoke
+                </Button>
+              </Row>
+            ))}
+          </RowList>)}
+      </Card>
     </section>
   );
 }

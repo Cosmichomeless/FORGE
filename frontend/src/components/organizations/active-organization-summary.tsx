@@ -1,19 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, Building2 } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { LoadingState, Skeleton } from "@/components/ui/skeleton";
 import { useOrganizations } from "./organization-provider";
 
 export function ActiveOrganizationSummary() {
   const { active, isPending, isError } = useOrganizations();
-  if (isPending) return <p role="status" className="mt-6">Loading organizations…</p>;
-  if (isError) return <p role="alert" className="mt-6">Unable to load your organizations.</p>;
-  if (!active) return <p className="mt-6">You are not in an organization yet. <Link href="/organizations" className="underline">Create one</Link>.</p>;
+  if (isPending) return <LoadingState label="Loading organizations…"><Skeleton className="h-[5.5rem] rounded-xl" /></LoadingState>;
+  if (isError) return <Alert tone="error" role="alert">Unable to load your organizations.</Alert>;
+  if (!active) {
+    return (
+      <Alert tone="info">
+        <p>You are not in an organization yet. <Link href="/organizations" className="font-medium underline">Create one</Link>.</p>
+      </Alert>
+    );
+  }
   return (
-    <section aria-labelledby="active-org" className="mt-6 rounded-md border p-4">
-      <h2 id="active-org" className="text-sm font-medium text-neutral-600">Active organization</h2>
-      <p className="text-xl font-semibold">{active.name}</p>
-      <p className="text-sm text-neutral-600">{active.slug} · your role: {active.role}</p>
-      <Link href={`/organizations/${active.id}`} className="mt-2 inline-block text-sm underline">Open organization</Link>
-    </section>
+    <Card>
+      <section aria-labelledby="active-org" className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+        <div className="flex min-w-0 items-center gap-4">
+          <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-soft-foreground"><Building2 className="size-5" /></span>
+          <div className="min-w-0 space-y-0.5">
+            <h2 id="active-org" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Active organization</h2>
+            <p className="truncate text-lg font-semibold tracking-tight">{active.name}</p>
+            <p className="text-[0.8125rem] text-muted-foreground">{active.slug} · your role: {active.role}</p>
+          </div>
+        </div>
+        <Button asChild variant="outline" size="sm"><Link href={`/organizations/${active.id}`}>Open organization<ArrowRight aria-hidden="true" /></Link></Button>
+      </section>
+    </Card>
   );
 }
