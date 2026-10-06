@@ -86,6 +86,16 @@ V1 debe figurar una sola vez con success=true. No modifiques migraciones ya apli
 
 Con `.env` de la raíz rellenado (`DB_USER`, `DB_PASSWORD` son obligatorios), `docker compose up -d --build --wait` construye y levanta PostgreSQL, API y frontend; cada servicio espera a que el anterior esté *healthy*. La API queda en http://127.0.0.1:8080 y la interfaz en http://127.0.0.1:3000 (puertos configurables con `BACKEND_PORT` / `FRONTEND_PORT`). `NEXT_PUBLIC_API_URL` se incrusta al construir la imagen del frontend, así que cambiarla exige `--build`.
 
+### Regenerar las capturas del README
+
+Con la API en http://localhost:8080 y el frontend en marcha (por ejemplo en otro puerto si el 3000 está ocupado, construido con el mismo `NEXT_PUBLIC_API_URL` y con `APP_FRONTEND_ORIGIN` apuntando a esa URL), desde `frontend/`:
+
+```bash
+SCREENSHOTS=1 E2E_BASE_URL=http://localhost:3100 npx playwright test screenshots
+```
+
+El test crea por API usuarios, una organización, proyectos e incidencias de ejemplo y escribe los PNG en `docs/screenshots/` (1440x900 a doble densidad, más una vista móvil de 390 px). Usa siempre el mismo host (`localhost`) en el frontend y en la API para que la cookie de sesión y CORS funcionen.
+
 ## Parar los servicios
 
 Detén frontend y backend con Ctrl+C en sus terminales. Desde la raíz, ejecuta docker compose down para detener la base sin eliminar el volumen. **No uses la opción -v si necesitas conservar los datos.**

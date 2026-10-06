@@ -24,6 +24,7 @@ FORGE es un gestor de proyectos multiusuario inspirado en Linear y Jira, constru
 - **Incidencias** numeradas por proyecto (`CORE-1`, `CORE-2`…) con estado, prioridad y asignación.
 - **Comentarios, historial de actividad, búsqueda con filtros y panel personal.**
 - **Autenticación** con Spring Security: sesión HttpOnly + CSRF, contraseñas con BCrypt.
+- **Interfaz responsive** con sistema de diseño propio (Tailwind 4), tema claro y oscuro, estados de carga con skeletons y navegación lateral que se pliega en móvil.
 
 ## Probarlo en un comando
 
@@ -39,13 +40,17 @@ Abre `https://app.forge.localhost:8443`, crea una cuenta y recorre el flujo: org
 
 ## Capturas
 
-| Inicio de sesión | Organización |
-| --- | --- |
-| ![Login](docs/screenshots/01-login.png) | ![Organización](docs/screenshots/02-organization.png) |
-| **Incidencias de un proyecto** | **Detalle de incidencia** |
-| ![Incidencias](docs/screenshots/03-project-issues.png) | ![Detalle](docs/screenshots/04-issue-detail.png) |
+Interfaz clara por defecto y con tema oscuro automático según las preferencias del sistema. Las capturas muestran un espacio de trabajo con datos de ejemplo.
 
-Se regeneran con `SCREENSHOTS=1 E2E_BASE_URL=<url> npx playwright test screenshots` (desde `frontend/`).
+| Inicio de sesión | Panel personal |
+| --- | --- |
+| ![Pantalla de inicio de sesión con el formulario centrado y el logotipo de FORGE](docs/screenshots/01-login.png) | ![Panel personal con las incidencias asignadas, organizaciones y accesos rápidos](docs/screenshots/02-dashboard.png) |
+| **Organización** | **Incidencias de un proyecto** |
+| ![Organización con proyectos, miembros con sus roles e invitaciones pendientes](docs/screenshots/03-organization.png) | ![Listado de incidencias de un proyecto con búsqueda, filtros de estado, prioridad y asignado, y paginación](docs/screenshots/04-project-issues.png) |
+| **Detalle de incidencia** | **Vista móvil** |
+| ![Detalle de una incidencia con estado, prioridad, asignación, comentarios y línea de actividad](docs/screenshots/05-issue-detail.png) | ![Listado de incidencias en un móvil de 390 píxeles de ancho, con navegación en cajón y filtros apilados](docs/screenshots/06-mobile-issues.png) |
+
+Se regeneran con `SCREENSHOTS=1 E2E_BASE_URL=<url> npx playwright test screenshots` (desde `frontend/`). Necesitan la API accesible en `http://localhost:8080` (o la URL de `E2E_API_URL`): el test crea por API usuarios, una organización, proyectos e incidencias de ejemplo con cuentas nuevas, así que se puede lanzar contra una base de datos con datos previos.
 
 ## Arquitectura
 
