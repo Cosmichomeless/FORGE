@@ -1,0 +1,29 @@
+# Render Blueprint: API (Docker) on the free plan. Database lives on Neon; frontend on Vercel.
+# Secret values marked sync:false are entered in the Render dashboard, never committed.
+services:
+  - type: web
+    name: forge-api
+    runtime: docker
+    plan: free
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=65 -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+      - key: DB_URL
+        sync: false # jdbc:postgresql://<direct-neon-host>/<db>?sslmode=require
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: APP_FRONTEND_ORIGIN
+        sync: false # https://<project>.vercel.app
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAME_SITE
+        value: lax
+      - key: FORWARD_HEADERS_STRATEGY
+        value: framework

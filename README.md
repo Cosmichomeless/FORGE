@@ -28,7 +28,7 @@ FORGE es un gestor de proyectos multiusuario inspirado en Linear y Jira, constru
 
 ## Probarlo en un comando
 
-> La demo pública no está desplegada. En su lugar, el entorno de producción se ensaya en local, con HTTPS incluido.
+> La demo pública todavía no está desplegada. Está preparado el despliegue gratuito (Vercel + Render + Neon, ver [docs/deploy-free.md](docs/deploy-free.md)). Mientras tanto, el entorno de producción se ensaya en local, con HTTPS incluido.
 
 ```bash
 ./deploy/deploy.sh   # HTTPS + frontend + API + base de datos, y comprobaciones de humo
@@ -121,6 +121,7 @@ FORGE/
 ## Despliegue
 
 - **Ensayo de producción en local** (`./deploy/deploy.sh`): ingress HTTPS, cookies `Secure`, secretos generados, rol de BD sin privilegios, BD sin puertos expuestos, copia y restauración, y 11 comprobaciones de humo.
+- **Demo gratuita (Vercel + Render + Neon)**: preparada con `render.yaml` y un proxy `/api/*` en `frontend/next.config.ts`; pasos en [docs/deploy-free.md](docs/deploy-free.md). **No desplegada**: no hay demo pública ni URL.
 - **Azure** (Container Apps + PostgreSQL Flexible Server): arquitectura y configuración documentadas en [docs/azure.md](docs/azure.md). **No está desplegado**: no hay demo pública ni URL.
 
 ## Licencia

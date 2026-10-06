@@ -77,6 +77,9 @@ Alternativa gratuita valorada (no ejecutada, planes a verificar en cada proveedo
 | API (Docker) | Render, plan Free | Se duerme sin tráfico (primer acceso lento); 512 MB de RAM, hay que limitar la JVM |
 | PostgreSQL | Neon, plan Free | Permanente; la BD gratuita de Render caduca |
 
+**Vía elegida para la demo (7 de octubre de 2026): la gratuita.** Pasos y límites en
+[deploy-free.md](deploy-free.md). Azure queda como alternativa de pago.
+
 Railway y Fly.io no se consideran: no ofrecen un plan gratuito permanente. Con frontend y
 API en dominios distintos, la cookie de sesión pasa a ser de terceros y algunos
 navegadores (Safari) la bloquean; habría que servir `/api/*` desde el dominio del frontend
