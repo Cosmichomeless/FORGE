@@ -165,6 +165,7 @@ describe("IssueDetail", () => {
     vi.mocked(issuesApi.get).mockResolvedValueOnce(issue()).mockResolvedValue(edited);
     vi.mocked(issuesApi.edit).mockResolvedValue(edited);
     wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit issue" }));
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
     await userEvent.type(title, "Fix signup");
@@ -277,7 +278,8 @@ describe("ActivityTimeline", () => {
       entry({ id: "4", type: "COMMENTED" }),
     ]);
     wrap(<IssueDetail organizationId="o1" projectId="p1" number="1" />);
-    const items = await screen.findAllByRole("listitem");
+    await screen.findByText(/assigned this issue to Grace/);
+    const items = screen.getAllByRole("listitem");
     const text = items.map(i => i.textContent ?? "").filter(t => /Created|Assignment|Status|Comment/.test(t.slice(0, 12)));
     expect(text.some(t => t.includes("Assignment") && t.includes("assigned this issue to Grace"))).toBe(true);
     expect(text.some(t => t.includes("Status") && t.includes("from To do to In progress"))).toBe(true);

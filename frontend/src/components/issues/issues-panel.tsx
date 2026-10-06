@@ -4,17 +4,27 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Inbox, Plus, Search } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Avatar } from "@/components/ui/avatar";
+import { Code } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle, Row, RowList } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Select } from "@/components/ui/input";
+import { ListSkeleton, LoadingState } from "@/components/ui/skeleton";
+import { PriorityBadge, StatusBadge } from "./issue-badges";
 import {
   issuePriorities, issueStatuses, issuesApi, issuesKey, priorityLabel, statusLabel,
   type IssuePriority, type IssueStatus,
 } from "@/lib/issues-api";
 import { organizationsApi } from "@/lib/organizations-api";
 import { organizationsKey } from "@/components/organizations/organization-provider";
+import { cn } from "@/lib/utils";
+import { controlClass } from "@/components/ui/input";
 import { CreateIssueForm } from "./create-issue-form";
 
 const PAGE_SIZE = 20;
-const selectClass = "rounded-md border bg-transparent px-2 py-1.5 text-sm";
 
 /** Filters live in the URL (?q, status, priority, assignee, page) so they survive reloads and can be shared. */
 export function readFilters(params: URLSearchParams): { q: string; status: IssueStatus | ""; priority: IssuePriority | ""; assignee: string; page: number } {
@@ -34,10 +44,22 @@ function SearchBox({ initial, onSearch }: { initial: string; onSearch: (q: strin
   const [draft, setDraft] = useState(initial);
   return (
     <form role="search" aria-label="Search issues" className="flex gap-2" onSubmit={event => { event.preventDefault(); onSearch(draft.trim()); }}>
-      <input type="search" aria-label="Search" placeholder="Key or title" value={draft} onChange={event => setDraft(event.target.value)}
-        className="w-56 rounded-md border bg-transparent px-3 py-1.5 text-sm" />
-      <Button type="submit" size="sm" variant="outline">Search</Button>
+      <span className="relative inline-flex items-center">
+        <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 size-4 text-muted-foreground" />
+        <input type="search" aria-label="Search" placeholder="Key or title" value={draft} onChange={event => setDraft(event.target.value)}
+          className={cn(controlClass, "h-9 w-52 pl-8 sm:w-60")} />
+      </span>
+      <Button type="submit" size="sm" variant="outline" className="h-9">Search</Button>
     </form>
+  );
+}
+
+function Filter({ id, label, value, onChange, children }: { id: string; label: string; value: string; onChange: (value: string) => void; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <label htmlFor={id} className="text-[0.8125rem] font-medium text-muted-foreground">{label}</label>
+      <Select id={id} wrapperClassName="w-auto" className="w-36" value={value} onChange={event => onChange(event.target.value)}>{children}</Select>
+    </div>
   );
 }
 
@@ -67,63 +89,66 @@ export function IssuesPanel({ organizationId, projectId, archived }: { organizat
   });
   const data = issues.data;
   return (
-    <section aria-labelledby="issues-heading" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="issues-heading" className="text-xl font-semibold">Issues</h2>
-        {!archived && !creating && <Button size="sm" onClick={() => setCreating(true)}>New issue</Button>}
-      </div>
-      {creating && <CreateIssueForm organizationId={organizationId} projectId={projectId} onCancel={() => setCreating(false)}
-        onCreated={() => { setCreating(false); update({ page: null }); }} />}
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <SearchBox key={filters.q} initial={filters.q} onSearch={q => setFilter("q", q)} />
-        <label className="flex items-center gap-2">Status
-          <select className={selectClass} value={filters.status} onChange={event => setFilter("status", event.target.value)}>
+    <section aria-labelledby="issues-heading">
+      <Card>
+        <CardHeader actions={!archived && !creating ? <Button size="sm" onClick={() => setCreating(true)}><Plus aria-hidden="true" />New issue</Button> : undefined}>
+          <CardTitle id="issues-heading">Issues</CardTitle>
+          <CardDescription>{data ? `${data.totalItems} ${data.totalItems === 1 ? "issue" : "issues"}${hasFilters ? " match your filters" : ""}` : "Track and triage the work in this project."}</CardDescription>
+        </CardHeader>
+        {creating && <div className="border-b border-border bg-muted/40 p-4 sm:p-5"><CreateIssueForm organizationId={organizationId} projectId={projectId} onCancel={() => setCreating(false)}
+          onCreated={() => { setCreating(false); update({ page: null }); }} /></div>}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3 sm:px-5">
+          <SearchBox key={filters.q} initial={filters.q} onSearch={q => setFilter("q", q)} />
+          <Filter id="filter-status" label="Status" value={filters.status} onChange={value => setFilter("status", value)}>
             <option value="">All</option>
             {issueStatuses.map(value => <option key={value} value={value}>{statusLabel[value]}</option>)}
-          </select>
-        </label>
-        <label className="flex items-center gap-2">Priority
-          <select className={selectClass} value={filters.priority} onChange={event => setFilter("priority", event.target.value)}>
+          </Filter>
+          <Filter id="filter-priority" label="Priority" value={filters.priority} onChange={value => setFilter("priority", value)}>
             <option value="">All</option>
             {issuePriorities.map(value => <option key={value} value={value}>{priorityLabel[value]}</option>)}
-          </select>
-        </label>
-        <label className="flex items-center gap-2">Assignee
-          <select className={selectClass} value={filters.assignee} onChange={event => setFilter("assignee", event.target.value)}>
+          </Filter>
+          <Filter id="filter-assignee" label="Assignee" value={filters.assignee} onChange={value => setFilter("assignee", value)}>
             <option value="">Anyone</option>
             <option value="none">Unassigned</option>
             {members.data?.map(member => <option key={member.userId} value={member.userId}>{member.name}</option>)}
-          </select>
-        </label>
-        {hasFilters && <Button size="sm" variant="outline" onClick={() => router.replace(pathname, { scroll: false })}>Clear filters</Button>}
-      </div>
-      {issues.isPending && <p role="status">Loading issues…</p>}
-      {issues.isError && <div className="space-y-2"><p role="alert">Unable to load issues.</p><Button onClick={() => { void issues.refetch(); }}>Retry</Button></div>}
-      {data?.items.length === 0 && <p className="text-sm">{hasFilters ? "No issues match these filters." : archived ? "This archived project has no issues." : "No issues yet. Create the first one with “New issue”."}</p>}
-      {data && data.items.length > 0 && <>
-        <ul className="divide-y rounded-md border">
-          {data.items.map(issue => (
-            <li key={issue.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
-              <div className="flex items-center gap-3">
-                <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-sm">{issue.identifier}</code>
-                <Link href={`/organizations/${organizationId}/projects/${projectId}/issues/${issue.number}`} className="font-medium underline">{issue.title}</Link>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-neutral-600">
-                <span>{statusLabel[issue.status]}</span>
-                <span>{priorityLabel[issue.priority]}</span>
-                <span>{issue.assignee ? issue.assignee.name : "Unassigned"}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <nav aria-label="Issues pagination" className="flex items-center justify-between text-sm">
-          <span>Page {data.page + 1} of {Math.max(data.totalPages, 1)} · {data.totalItems} issues</span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={data.page === 0} onClick={() => setPage(data.page - 1)}>Previous</Button>
-            <Button variant="outline" size="sm" disabled={data.page + 1 >= data.totalPages} onClick={() => setPage(data.page + 1)}>Next</Button>
-          </div>
-        </nav>
-      </>}
+          </Filter>
+          {hasFilters && <Button size="sm" variant="ghost" onClick={() => router.replace(pathname, { scroll: false })}>Clear filters</Button>}
+        </div>
+        {issues.isPending && <LoadingState label="Loading issues…"><ListSkeleton rows={5} /></LoadingState>}
+        {issues.isError && <div className="p-4 sm:p-5"><Alert tone="error" role="alert" action={<Button size="sm" onClick={() => { void issues.refetch(); }}>Retry</Button>}>Unable to load issues.</Alert></div>}
+        {data?.items.length === 0 && (hasFilters
+          ? <EmptyState icon={<Search />} title="No issues match these filters." description="Try a different search or clear the filters." />
+          : archived
+            ? <EmptyState icon={<Inbox />} title="This archived project has no issues." />
+            : <EmptyState icon={<Inbox />} title="No issues yet" description="Create the first one with “New issue”." />)}
+        {data && data.items.length > 0 && <>
+          <RowList className={cn("transition-opacity", issues.isFetching && issues.isPlaceholderData && "opacity-60")}>
+            {data.items.map(issue => (
+              <Row key={issue.id} className="gap-y-1.5">
+                <div className="flex min-w-0 flex-1 basis-72 items-center gap-3">
+                  <Code className="shrink-0">{issue.identifier}</Code>
+                  <Link href={`/organizations/${organizationId}/projects/${projectId}/issues/${issue.number}`}
+                    className="truncate text-sm font-medium text-foreground hover:text-link hover:underline">{issue.title}</Link>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={issue.status} />
+                  <PriorityBadge priority={issue.priority} />
+                  <span className="flex min-w-28 items-center gap-2 text-[0.8125rem] text-muted-foreground">
+                    {issue.assignee ? <><Avatar name={issue.assignee.name} size="sm" /><span className="text-foreground">{issue.assignee.name}</span></> : "Unassigned"}
+                  </span>
+                </div>
+              </Row>
+            ))}
+          </RowList>
+          <nav aria-label="Issues pagination" className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-[0.8125rem] text-muted-foreground sm:px-5">
+            <span>Page {data.page + 1} of {Math.max(data.totalPages, 1)} · {data.totalItems} issues</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={data.page === 0} onClick={() => setPage(data.page - 1)}>Previous</Button>
+              <Button variant="outline" size="sm" disabled={data.page + 1 >= data.totalPages} onClick={() => setPage(data.page + 1)}>Next</Button>
+            </div>
+          </nav>
+        </>}
+      </Card>
     </section>
   );
 }

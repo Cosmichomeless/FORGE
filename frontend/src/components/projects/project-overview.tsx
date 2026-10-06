@@ -3,7 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Archive, ArchiveRestore, ArrowLeft } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Badge, Code } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/ui/page-container";
+import { Breadcrumbs, PageHeader } from "@/components/ui/page-header";
+import { LoadingState, Skeleton } from "@/components/ui/skeleton";
 import { organizationsKey } from "@/components/organizations/organization-provider";
 import { ApiError } from "@/lib/http";
 import { organizationsApi } from "@/lib/organizations-api";
@@ -33,42 +40,60 @@ export function ProjectOverview({ organizationId, projectId }: { organizationId:
     onError: error => { setMessage(describe(error)); void client.invalidateQueries({ queryKey: key }); },
   });
 
-  if (organization.isPending || project.isPending) return <p role="status">Loading project…</p>;
+  if (organization.isPending || project.isPending) {
+    return (
+      <PageContainer>
+        <LoadingState label="Loading project…" className="space-y-6">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </LoadingState>
+      </PageContainer>
+    );
+  }
   if (organization.isError || project.isError) {
     const missing = notFound(organization.error) || notFound(project.error);
-    return <div className="space-y-4">
-      <p role="alert">{missing ? "Project not found, or you are not a member of its organization." : "Unable to load this project."}</p>
-      {!missing && <Button onClick={() => { void organization.refetch(); void project.refetch(); }}>Retry</Button>}
-      <p className="text-sm"><Link href={`/organizations/${organizationId}`} className="underline">Back to organization</Link></p>
-    </div>;
+    return (
+      <PageContainer size="narrow" className="space-y-4">
+        <Alert tone="error" role="alert" action={!missing ? <Button size="sm" onClick={() => { void organization.refetch(); void project.refetch(); }}>Retry</Button> : undefined}>
+          {missing ? "Project not found, or you are not a member of its organization." : "Unable to load this project."}
+        </Alert>
+        <Button asChild variant="outline" size="sm"><Link href={`/organizations/${organizationId}`}><ArrowLeft aria-hidden="true" />Back to organization</Link></Button>
+      </PageContainer>
+    );
   }
   const data = project.data;
   const canManage = canManageOrganization(organization.data.role);
   const archived = data.status === "ARCHIVED";
   return (
-    <div className="space-y-8">
-      <p className="text-sm"><Link href={`/organizations/${organizationId}`} className="underline">← {organization.data.name}</Link></p>
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold">{data.name}</h1>
-        <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-neutral-600">
-          <div className="flex gap-1"><dt>Key:</dt><dd><code className="rounded bg-neutral-100 px-1.5 py-0.5">{data.key}</code></dd></div>
-          <div className="flex gap-1"><dt>Status:</dt><dd>{archived ? "Archived" : "Active"}</dd></div>
-          <div className="flex gap-1"><dt>Created:</dt><dd>{new Date(data.createdAt).toLocaleDateString()}</dd></div>
-        </dl>
-        {data.description && <p>{data.description}</p>}
-      </header>
-      {archived && <p role="status" className="rounded-md border p-3 text-sm">This project is archived. Its data is kept, but it is hidden from the active list and cannot be edited.</p>}
-      {message && <p role="alert" className="text-sm text-red-600">{message}</p>}
+    <PageContainer size="wide" className="space-y-8">
+      <PageHeader title={data.name}
+        breadcrumbs={<Breadcrumbs items={[{ label: "Organizations", href: "/organizations" }, { label: organization.data.name, href: `/organizations/${organizationId}` }, { label: data.name }]} />}
+        description={data.description}
+        meta={
+          <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[0.8125rem] text-muted-foreground">
+            <div className="flex items-center gap-1.5"><dt>Key:</dt><dd><Code>{data.key}</Code></dd></div>
+            <div className="flex items-center gap-1.5"><dt>Status:</dt><dd><Badge tone={archived ? "neutral" : "success"}>{archived ? "Archived" : "Active"}</Badge></dd></div>
+            <div className="flex items-center gap-1.5"><dt>Created:</dt><dd>{new Date(data.createdAt).toLocaleDateString()}</dd></div>
+          </dl>
+        } />
+      {archived && <Alert tone="warning" role="status">This project is archived. Its data is kept, but it is hidden from the active list and cannot be edited.</Alert>}
+      {message && <Alert tone="error" role="alert">{message}</Alert>}
       <IssuesPanel organizationId={organizationId} projectId={projectId} archived={archived} />
       {canManage
-        ? <section aria-labelledby="project-settings" className="space-y-4">
-            <h2 id="project-settings" className="text-xl font-semibold">Settings</h2>
-            {!archived && <EditProjectForm key={data.updatedAt} project={data} />}
-            <Button variant="outline" disabled={changeStatus.isPending} onClick={() => changeStatus.mutate(archived ? "restore" : "archive")}>
-              {changeStatus.isPending ? "Working…" : archived ? "Restore project" : "Archive project"}
-            </Button>
+        ? <section aria-labelledby="project-settings">
+            <Card>
+              <CardHeader><CardTitle id="project-settings">Settings</CardTitle><CardDescription>Update the project details or archive it.</CardDescription></CardHeader>
+              <CardBody className="space-y-5">
+                {!archived && <div className="max-w-md"><EditProjectForm key={data.updatedAt} project={data} /></div>}
+                <Button variant="outline" disabled={changeStatus.isPending} onClick={() => changeStatus.mutate(archived ? "restore" : "archive")}>
+                  {archived ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
+                  {changeStatus.isPending ? "Working…" : archived ? "Restore project" : "Archive project"}
+                </Button>
+              </CardBody>
+            </Card>
           </section>
-        : <p className="text-sm">Only owners and admins can edit or archive projects.</p>}
-    </div>
+        : <Alert tone="info">Only owners and admins can edit or archive projects.</Alert>}
+    </PageContainer>
   );
 }
