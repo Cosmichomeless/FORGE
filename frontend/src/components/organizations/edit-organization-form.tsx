@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { ApiError } from "@/lib/http";
@@ -26,12 +27,12 @@ export function EditOrganizationForm({ organization }: { organization: Organizat
     },
   });
   return (
-    <form noValidate aria-busy={update.isPending} className="max-w-sm space-y-4"
+    <form noValidate aria-busy={update.isPending} className="space-y-4"
       onSubmit={event => { void handleSubmit(values => { if (!update.isPending) update.mutate(values); })(event); }}>
       <TextField label="Name" error={errors.name?.message} {...register("name")} />
       <TextField label="Slug" autoComplete="off" error={errors.slug?.message} {...register("slug")} />
-      {errors.root && <p role="alert" className="text-sm text-red-600">{errors.root.message}</p>}
-      {update.isSuccess && !isDirty && <p role="status" className="text-sm text-green-700">Changes saved.</p>}
+      {errors.root && <Alert tone="error" role="alert">{errors.root.message}</Alert>}
+      {update.isSuccess && !isDirty && <Alert tone="success" role="status">Changes saved.</Alert>}
       <Button type="submit" disabled={update.isPending || !isDirty}>{update.isPending ? "Saving…" : "Save changes"}</Button>
     </form>
   );

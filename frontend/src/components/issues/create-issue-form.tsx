@@ -4,8 +4,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/text-field";
+import { TextAreaField, TextField } from "@/components/ui/text-field";
 import { ApiError } from "@/lib/http";
 import { issuesApi, issuesKey, type Issue } from "@/lib/issues-api";
 
@@ -28,11 +29,11 @@ export function CreateIssueForm({ organizationId, projectId, onCreated, onCancel
     },
   });
   return (
-    <form noValidate aria-label="New issue" aria-busy={create.isPending} className="max-w-md space-y-4 rounded-md border p-4"
+    <form noValidate aria-label="New issue" aria-busy={create.isPending} className="max-w-xl space-y-4"
       onSubmit={event => { void handleSubmit(values => { if (!create.isPending) create.mutate(values); })(event); }}>
       <TextField label="Title" autoComplete="off" error={errors.title?.message} {...register("title")} />
-      <TextField label="Description (optional)" autoComplete="off" error={errors.description?.message} {...register("description")} />
-      {errors.root && <p role="alert" className="text-sm text-red-600">{errors.root.message}</p>}
+      <TextAreaField label="Description (optional)" rows={3} error={errors.description?.message} {...register("description")} />
+      {errors.root && <Alert tone="error" role="alert">{errors.root.message}</Alert>}
       <div className="flex gap-2">
         <Button type="submit" disabled={create.isPending}>{create.isPending ? "Creating…" : "Create issue"}</Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={create.isPending}>Cancel</Button>

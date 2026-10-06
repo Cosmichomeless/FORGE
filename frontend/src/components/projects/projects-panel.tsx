@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { FolderKanban, Plus } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Badge, Code } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle, Row, RowList } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ListSkeleton, LoadingState } from "@/components/ui/skeleton";
 import { type Organization } from "@/lib/organizations-api";
 import { canManageOrganization } from "@/lib/permissions";
 import { projectsApi, projectsKey, type ProjectFilter } from "@/lib/projects-api";
@@ -20,38 +26,42 @@ export function ProjectsPanel({ organization }: { organization: Organization }) 
     retry: false,
   });
   return (
-    <section aria-labelledby="projects-heading" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="projects-heading" className="text-xl font-semibold">Projects</h2>
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={showArchived} onChange={event => setShowArchived(event.target.checked)} />
+    <section aria-labelledby="projects-heading">
+      <Card>
+        <CardHeader actions={<>
+          <label className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
+            <input type="checkbox" className="size-4 accent-accent" checked={showArchived} onChange={event => setShowArchived(event.target.checked)} />
             Show archived
           </label>
-          {canCreate && !creating && <Button size="sm" onClick={() => setCreating(true)}>New project</Button>}
-        </div>
-      </div>
-      {creating && <CreateProjectForm organizationId={organization.id} onCancel={() => setCreating(false)} onCreated={() => setCreating(false)} />}
-      {projects.isPending && <p role="status">Loading projects…</p>}
-      {projects.isError && <div className="space-y-2"><p role="alert">Unable to load projects.</p><Button onClick={() => { void projects.refetch(); }}>Retry</Button></div>}
-      {projects.data?.length === 0 && <p className="text-sm">
-        {showArchived ? "This organization has no projects." : "No active projects yet."}{" "}
-        {canCreate ? "Create the first one with “New project”." : "Ask an owner or admin to create one."}
-      </p>}
-      {projects.data && projects.data.length > 0 && <ul className="divide-y rounded-md border">
-        {projects.data.map(project => (
-          <li key={project.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
-            <div>
-              <Link href={`/organizations/${organization.id}/projects/${project.id}`} className="font-medium underline">{project.name}</Link>
-              {project.description && <p className="text-sm text-neutral-600">{project.description}</p>}
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <code className="rounded bg-neutral-100 px-1.5 py-0.5">{project.key}</code>
-              {project.status === "ARCHIVED" && <span className="rounded border px-1.5 py-0.5 text-neutral-600">Archived</span>}
-            </div>
-          </li>
-        ))}
-      </ul>}
+          {canCreate && !creating && <Button size="sm" onClick={() => setCreating(true)}><Plus aria-hidden="true" />New project</Button>}
+        </>}>
+          <CardTitle id="projects-heading">Projects</CardTitle>
+          <CardDescription>Group issues by product, team or initiative.</CardDescription>
+        </CardHeader>
+        {creating && <div className="border-b border-border bg-muted/40 p-4 sm:p-5"><CreateProjectForm organizationId={organization.id} onCancel={() => setCreating(false)} onCreated={() => setCreating(false)} /></div>}
+        {projects.isPending && <LoadingState label="Loading projects…"><ListSkeleton rows={3} /></LoadingState>}
+        {projects.isError && <div className="p-4 sm:p-5"><Alert tone="error" role="alert" action={<Button size="sm" onClick={() => { void projects.refetch(); }}>Retry</Button>}>Unable to load projects.</Alert></div>}
+        {projects.data?.length === 0 && <EmptyState icon={<FolderKanban />}
+          title={showArchived ? "This organization has no projects." : "No active projects yet."}
+          description={canCreate ? "Create the first one with “New project”." : "Ask an owner or admin to create one."} />}
+        {projects.data && projects.data.length > 0 && <RowList>
+          {projects.data.map(project => (
+            <Row key={project.id} className="justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground"><FolderKanban className="size-4" /></span>
+                <div className="min-w-0">
+                  <Link href={`/organizations/${organization.id}/projects/${project.id}`} className="block truncate text-sm font-medium text-foreground hover:text-link hover:underline">{project.name}</Link>
+                  {project.description && <p className="truncate text-xs text-muted-foreground">{project.description}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {project.status === "ARCHIVED" && <Badge tone="neutral">Archived</Badge>}
+                <Code>{project.key}</Code>
+              </div>
+            </Row>
+          ))}
+        </RowList>}
+      </Card>
     </section>
   );
 }

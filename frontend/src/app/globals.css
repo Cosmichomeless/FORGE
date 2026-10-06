@@ -1,5 +1,166 @@
 @import "tailwindcss";
 
-body {
-  margin: 0;
+/*
+ * Design tokens. Every colour used by the UI comes from here so that light and dark themes stay consistent.
+ * The theme follows the operating system (prefers-color-scheme); there is no manual toggle to keep state out of the page.
+ * Text/background pairs below were chosen to meet WCAG AA (4.5:1) in both themes.
+ */
+:root {
+  color-scheme: light dark;
+
+  --background: #f6f7f9;
+  --surface: #ffffff;
+  --muted: #f0f2f5;
+  --border: #e2e5ea;
+  --border-strong: #cdd2da;
+  --foreground: #14161a;
+  --muted-foreground: #596070;
+  --ring: #6366f1;
+
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-foreground: #ffffff;
+  --accent-soft: #eef0ff;
+  --accent-soft-foreground: #3730a3;
+  --link: #4338ca;
+
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-foreground: #ffffff;
+  --danger-soft: #fef2f2;
+  --danger-soft-foreground: #b91c1c;
+  --danger-border: #fecaca;
+
+  --success-soft: #ecfdf3;
+  --success-soft-foreground: #166534;
+  --success-border: #bbf7d0;
+  --success-icon: #16a34a;
+
+  --warning-soft: #fffbeb;
+  --warning-soft-foreground: #92400e;
+  --warning-border: #fde68a;
+  --warning-icon: #d97706;
+
+  --info-soft: #eff6ff;
+  --info-soft-foreground: #1d4ed8;
+  --info-border: #bfdbfe;
+
+  --elev-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --elev-pop: 0 8px 24px rgb(16 24 40 / 0.12), 0 2px 6px rgb(16 24 40 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0d0e12;
+    --surface: #15171c;
+    --muted: #1c1f26;
+    --border: #272a33;
+    --border-strong: #3a3e4b;
+    --foreground: #eceef2;
+    --muted-foreground: #9ba2b1;
+    --ring: #818cf8;
+
+    --accent: #4f46e5;
+    --accent-hover: #5b54ee;
+    --accent-foreground: #ffffff;
+    --accent-soft: #21244a;
+    --accent-soft-foreground: #c7caff;
+    --link: #a5a8ff;
+
+    --danger: #dc2626;
+    --danger-hover: #ef4444;
+    --danger-foreground: #ffffff;
+    --danger-soft: #2a1416;
+    --danger-soft-foreground: #fca5a5;
+    --danger-border: #5b2226;
+
+    --success-soft: #0f261a;
+    --success-soft-foreground: #86efac;
+    --success-border: #1f4d32;
+    --success-icon: #4ade80;
+
+    --warning-soft: #2a2008;
+    --warning-soft-foreground: #fcd34d;
+    --warning-border: #5a4310;
+    --warning-icon: #fbbf24;
+
+    --info-soft: #11213f;
+    --info-soft-foreground: #93c5fd;
+    --info-border: #1e3d70;
+
+    --elev-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --elev-pop: 0 8px 24px rgb(0 0 0 / 0.5);
+  }
+}
+
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-ring: var(--ring);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+  --color-link: var(--link);
+
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+  --color-danger-border: var(--danger-border);
+
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-success-border: var(--success-border);
+  --color-success-icon: var(--success-icon);
+
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-warning-border: var(--warning-border);
+  --color-warning-icon: var(--warning-icon);
+
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-foreground: var(--info-soft-foreground);
+  --color-info-border: var(--info-border);
+
+  --shadow-card: var(--elev-card);
+  --shadow-pop: var(--elev-pop);
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  ::selection { background: var(--accent-soft); color: var(--accent-soft-foreground); }
+  button, [role="button"], select, summary { cursor: pointer; }
+  button:disabled, select:disabled { cursor: not-allowed; }
+}
+
+@keyframes forge-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

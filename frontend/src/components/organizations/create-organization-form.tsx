@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { ApiError } from "@/lib/http";
@@ -44,8 +45,8 @@ export function CreateOrganizationForm({ onCreated }: { onCreated: (organization
       onSubmit={event => { void handleSubmit(values => { if (!create.isPending) create.mutate(values); })(event); }}>
       <TextField label="Name" autoComplete="organization" error={errors.name?.message} {...name} />
       <TextField label="Slug" autoComplete="off" error={errors.slug?.message} {...register("slug")} />
-      {errors.root && <p role="alert" className="text-sm text-red-600">{errors.root.message}</p>}
-      <Button type="submit" disabled={create.isPending}>{create.isPending ? "Creating…" : "Create organization"}</Button>
+      {errors.root && <Alert tone="error" role="alert">{errors.root.message}</Alert>}
+      <Button type="submit" className="w-full sm:w-auto" disabled={create.isPending}>{create.isPending ? "Creating…" : "Create organization"}</Button>
     </form>
   );
 }

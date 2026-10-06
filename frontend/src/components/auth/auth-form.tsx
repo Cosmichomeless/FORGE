@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/text-field";
 import { authApi, AuthApiError } from "@/lib/auth-api";
 import { useAuth } from "./auth-provider";
 
@@ -55,23 +57,21 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     } finally { submitting.current = false; }
   }
   const fields = isRegister ? ["name", "email", "password"] as const : ["email", "password"] as const;
+  const labels = { name: "Name", email: "Email", password: "Password" } as const;
   return (
-    <form noValidate onSubmit={(event) => { void handleSubmit(submit)(event); }} className="space-y-4" aria-busy={isSubmitting}>
+    <form noValidate onSubmit={(event) => { void handleSubmit(submit)(event); }} className="space-y-5" aria-busy={isSubmitting}>
       <fieldset disabled={isSubmitting} className="space-y-4">
         {fields.map(field => (
-          <div key={field} className="space-y-1">
-            <label htmlFor={field} className="block text-sm font-medium">{field === "name" ? "Name" : field === "email" ? "Email" : "Password"}</label>
-            <input id={field} type={field === "password" ? "password" : field === "email" ? "email" : "text"}
-              autoComplete={field === "password" ? (isRegister ? "new-password" : "current-password") : field === "email" ? "username" : "name"}
-              {...register(field)} aria-invalid={!!errors[field]} aria-describedby={errors[field] ? `${field}-error` : undefined}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2" />
-            {errors[field] && <p id={`${field}-error`} role="alert" className="text-sm text-red-600">{errors[field]?.message}</p>}
-          </div>
+          <TextField key={field} id={field} label={labels[field]} error={errors[field]?.message}
+            type={field === "password" ? "password" : field === "email" ? "email" : "text"}
+            autoComplete={field === "password" ? (isRegister ? "new-password" : "current-password") : field === "email" ? "username" : "name"}
+            hint={isRegister && field === "password" ? "At least 8 characters." : undefined}
+            {...register(field)} />
         ))}
-        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Please wait…" : isRegister ? "Create account" : "Log in"}</Button>
+        <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>{isSubmitting ? "Please wait…" : isRegister ? "Create account" : "Log in"}</Button>
       </fieldset>
-      {errors.root && <p role="alert" className="text-sm text-red-600">{errors.root.message}</p>}
-      <p className="text-sm"><Link className="underline" href={isRegister ? "/login" : "/register"}>{isRegister ? "Already have an account? Log in" : "Create an account"}</Link></p>
+      {errors.root && <Alert tone="error" role="alert">{errors.root.message}</Alert>}
+      <p className="text-center text-sm text-muted-foreground"><Link className="font-medium text-link underline-offset-4 hover:underline" href={isRegister ? "/login" : "/register"}>{isRegister ? "Already have an account? Log in" : "Create an account"}</Link></p>
     </form>
   );
 }

@@ -2,7 +2,12 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/ui/page-container";
+import { Breadcrumbs, PageHeader } from "@/components/ui/page-header";
+import { LoadingState, Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/http";
 import { organizationsApi } from "@/lib/organizations-api";
 import { canManageOrganization } from "@/lib/permissions";
@@ -21,28 +26,47 @@ export function OrganizationDetail({ organizationId }: { organizationId: string 
   });
   const loadedId = query.data?.id;
   useEffect(() => { if (loadedId) setActiveId(loadedId); }, [loadedId, setActiveId]);
-  if (query.isPending) return <p role="status">Loading organization…</p>;
+  if (query.isPending) {
+    return (
+      <PageContainer>
+        <LoadingState label="Loading organization…" className="space-y-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </LoadingState>
+      </PageContainer>
+    );
+  }
   if (query.isError) {
     const missing = query.error instanceof ApiError && (query.error.status === 404 || query.error.status === 400);
-    return <div className="space-y-4">
-      <p role="alert">{missing ? "Organization not found, or you are not a member of it." : "Unable to load this organization."}</p>
-      {!missing && <Button onClick={() => { void query.refetch(); }}>Retry</Button>}
-    </div>;
+    return (
+      <PageContainer size="narrow">
+        <Alert tone="error" role="alert" action={!missing ? <Button size="sm" onClick={() => { void query.refetch(); }}>Retry</Button> : undefined}>
+          {missing ? "Organization not found, or you are not a member of it." : "Unable to load this organization."}
+        </Alert>
+      </PageContainer>
+    );
   }
   const organization = query.data;
   const canEdit = canManageOrganization(organization.role);
   return (
-    <div className="space-y-10">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-semibold">{organization.name}</h1>
-        <p className="text-sm text-neutral-600">{organization.slug} · your role: {organization.role}</p>
-      </header>
-      {canEdit
-        ? <section aria-labelledby="org-settings" className="space-y-4"><h2 id="org-settings" className="text-xl font-semibold">Settings</h2><EditOrganizationForm key={organization.id + organization.name + organization.slug} organization={organization} /></section>
-        : <p className="text-sm">Only owners and admins can edit this organization.</p>}
+    <PageContainer className="space-y-8">
+      <PageHeader title={organization.name}
+        breadcrumbs={<Breadcrumbs items={[{ label: "Organizations", href: "/organizations" }, { label: organization.name }]} />}
+        description={`${organization.slug} · your role: ${organization.role}`} />
       <ProjectsPanel organization={organization} />
       <MembersPanel organization={organization} />
-      {canEdit && <InvitationsPanel organization={organization} />}
-    </div>
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        {canEdit && <InvitationsPanel organization={organization} />}
+        {canEdit
+          ? <section aria-labelledby="org-settings">
+              <Card>
+                <CardHeader><CardTitle id="org-settings">Settings</CardTitle><CardDescription>Rename the organization or change its slug.</CardDescription></CardHeader>
+                <CardBody><EditOrganizationForm key={organization.id + organization.name + organization.slug} organization={organization} /></CardBody>
+              </Card>
+            </section>
+          : <Alert tone="info">Only owners and admins can edit this organization.</Alert>}
+      </div>
+    </PageContainer>
   );
 }

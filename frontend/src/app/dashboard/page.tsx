@@ -1,12 +1,15 @@
 import { PrivateShell } from "@/components/auth/private-shell";
 import { PersonalDashboard } from "@/components/dashboard/personal-dashboard";
 import { ActiveOrganizationSummary } from "@/components/organizations/active-organization-summary";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function DashboardPage() {
-  return <main className="mx-auto max-w-4xl px-6 py-12"><PrivateShell>
-    <h1 className="text-3xl font-semibold">Dashboard</h1>
-    <p className="mt-4">Welcome to FORGE.</p>
-    <ActiveOrganizationSummary />
-    <PersonalDashboard />
-  </PrivateShell></main>;
+  return <PrivateShell>
+    <PageContainer className="space-y-8">
+      <PageHeader title="Dashboard" description="Welcome to FORGE." />
+      <ActiveOrganizationSummary />
+      <PersonalDashboard />
+    </PageContainer>
+  </PrivateShell>;
 }

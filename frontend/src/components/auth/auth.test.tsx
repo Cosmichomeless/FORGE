@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "./auth-provider";
 import { AuthForm } from "./auth-form";
 import { PrivateShell } from "./private-shell";
+import { UserMenu } from "@/components/layout/user-menu";
 import { authApi, AuthApiError } from "@/lib/auth-api";
 
 const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
@@ -87,7 +88,8 @@ describe("private shell", () => {
   it("resolves an existing cookie session and clears all private cache on logout", async () => {
     vi.mocked(authApi.me).mockResolvedValue(ada);
     vi.mocked(authApi.logout).mockResolvedValue(undefined);
-    const client = mount(<PrivateShell><p>Private content</p></PrivateShell>);
+    // Identity and logout live in the sidebar user menu; the shell only gates the page content.
+    const client = mount(<><UserMenu /><PrivateShell><p>Private content</p></PrivateShell></>);
     client.setQueryData(["private"], { secret: true });
     expect(await screen.findByText("Private content")).toBeTruthy();
     await userEvent.setup().click(screen.getByRole("button", { name: "Log out" }));
