@@ -60,6 +60,21 @@ Verificado el 7 de octubre de 2026 contra los servicios reales:
 - El recorrido E2E `frontend/e2e/journey.spec.ts` (2 pruebas) pasa contra la URL pública:
   `E2E_BASE_URL=https://forge-sandy-eta.vercel.app npx playwright test e2e/journey.spec.ts`.
 
+- `flyway_schema_history` en Neon: las migraciones V1–V9 con `success = t`.
+- Copia y restauración ensayadas contra Neon (PostgreSQL 18.6): un `pg_dump -Fc` de la base
+  real se restauró en un PostgreSQL 18 local desechable y conservó el historial de Flyway y
+  los datos (2 usuarios, 1 incidencia, 1 comentario). Hay que usar un cliente de la misma
+  versión mayor que el servidor (`pg_dump` 17 se niega a volcar un servidor 18):
+
+  ```bash
+  docker run --rm -e PGPASSWORD -e PGSSLMODE=require -v "$PWD:/out" postgres:18 \
+    pg_dump -h <host-directo> -U <usuario> -d <base> -Fc --no-owner --no-privileges -f /out/forge.dump
+  # restaurar en una base nueva (local o en otro proyecto de Neon):
+  pg_restore -h <destino> -U <usuario> -d <base_nueva> --no-owner --no-privileges forge.dump
+  ```
+
+  El dump contiene datos de usuarios: guárdalo fuera de Git y bórralo tras la prueba.
+
 No verificado: carga, copias de seguridad, alertas ni comportamiento tras semanas de suspensiones de Neon.
 
 Nota: tras cambiar variables en Vercel hay que redesplegar y la CDN puede servir un 404 cacheado
