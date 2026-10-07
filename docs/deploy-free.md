@@ -75,6 +75,12 @@ Verificado el 7 de octubre de 2026 contra los servicios reales:
 
   El dump contiene datos de usuarios: guárdalo fuera de Git y bórralo tras la prueba.
 
+- Logs de Render (arranque del 7 de octubre de 2026) y revisión del código: el arranque solo
+  muestra versión, puertos y el host y nombre de la base de datos (sin usuario ni contraseña);
+  el backend no tiene ninguna sentencia de log propia, ningún filtro de registro de peticiones
+  ni `show-sql`, y el nivel es el INFO por defecto, de modo que no se registran correos,
+  contraseñas ni cuerpos de petición. No se ha inspeccionado un tramo de logs con tráfico real.
+
 No verificado: carga, copias de seguridad, alertas ni comportamiento tras semanas de suspensiones de Neon.
 
 Nota: tras cambiar variables en Vercel hay que redesplegar y la CDN puede servir un 404 cacheado
