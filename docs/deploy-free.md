@@ -71,5 +71,9 @@ unos minutos; con la propia respuesta de `x-vercel-cache: HIT` se reconoce.
   de 30 a 60 segundos. Neon también se suspende por inactividad.
 - 512 MB de RAM en Render: `render.yaml` limita la JVM con `JAVA_TOOL_OPTIONS`. Si el
   arranque falla por memoria, es el primer sitio donde mirar.
+- **Acceso a la base de datos**: Neon Free expone un endpoint público protegido solo por TLS
+  y contraseña; el filtrado por IP y las redes privadas son de planes de pago. Es un límite
+  aceptado para esta demo, que solo contiene datos de prueba. En un entorno real habría que
+  restringir el acceso por red y rotar la contraseña periódicamente.
 - No hay copias automáticas con retención garantizada: es una demo, no un entorno de producción.
 - Los logs de Render sustituyen a Log Analytics; no hay alertas.
