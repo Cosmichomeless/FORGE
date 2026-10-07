@@ -4,7 +4,7 @@
 
 **Gestión de proyectos para equipos pequeños: organizaciones, incidencias y actividad, de extremo a extremo.**
 
-![Estado](https://img.shields.io/badge/estado-MVP%20local-blue)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.0-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4-6DB33F)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
